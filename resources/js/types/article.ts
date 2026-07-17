@@ -56,6 +56,19 @@ export type ArticleVersion = {
     };
 };
 
+export type ArticlePdf = {
+    id: string;
+    article_id: number;
+    kind: 'generated' | 'annotated';
+    parent_pdf_id: string | null;
+    article_version_number: number | null;
+    title: string;
+    created_at: string;
+    updated_at: string;
+    file_url: string;
+    view_url: string;
+};
+
 export type PaginatedArticles = {
     data: Article[];
     current_page: number;

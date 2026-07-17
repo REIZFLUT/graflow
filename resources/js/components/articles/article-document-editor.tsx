@@ -1,7 +1,8 @@
-import { Link } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 import type { Editor } from '@tiptap/react';
-import { ArrowLeft, History, Image, Save, SquareAsterisk, Tags } from 'lucide-react';
+import { ArrowLeft, FileText, History, Image, Save, SquareAsterisk, Tags } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import ArticleImageDialog from '@/components/articles/article-image-dialog';
 import ArticleMediaPanel from '@/components/articles/article-media-panel';
 import ArticleStatusSelect from '@/components/articles/article-status-select';
@@ -54,8 +55,10 @@ import {
     getArticleStatusLabel,
     type ArticleStatusValue,
 } from '@/lib/article-status';
+import { generateArticlePdfBlob } from '@/lib/article-pdf/generate';
 import { cn } from '@/lib/utils';
 import { edit as metadataEdit } from '@/routes/articles/metadata';
+import { store as storeArticlePdf } from '@/routes/articles/pdfs';
 import { index } from '@/routes/articles';
 import type {
     ArticleMedia,
@@ -113,7 +116,7 @@ export default function ArticleDocumentEditor({
     onMediaUpdate,
     onMediaDelete,
 }: ArticleDocumentEditorProps) {
-    const { t } = useTranslation();
+    const { t, locale } = useTranslation();
     const { setChrome, clearChrome } = useArticleEditorChrome();
     const [editor, setEditor] = useState<Editor | null>(null);
     const [footnoteDialogOpen, setFootnoteDialogOpen] = useState(false);
@@ -147,6 +150,7 @@ export default function ArticleDocumentEditor({
     const [mathVariant, setMathVariant] = useState<MathDialogVariant>('inline');
     const [mathMode, setMathMode] = useState<MathDialogMode>('create');
     const [editingMathPos, setEditingMathPos] = useState<number | null>(null);
+    const [pdfExporting, setPdfExporting] = useState(false);
 
     const openMathDialogForCreate = useCallback((variant: MathDialogVariant) => {
         setMathVariant(variant);
@@ -239,7 +243,6 @@ export default function ArticleDocumentEditor({
 
             if (media) {
                 openImageEditDialog(media);
-
                 return;
             }
 
@@ -565,6 +568,81 @@ export default function ArticleDocumentEditor({
                     </Button>
 
                     {articleId !== undefined && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            type="button"
+                            disabled={pdfExporting}
+                            onClick={async () => {
+                                if (articleId === undefined) {
+                                    return;
+                                }
+
+                                setPdfExporting(true);
+
+                                try {
+                                    const exportContent =
+                                        editor?.getJSON() as
+                                            | TipTapDocument
+                                            | undefined ?? content;
+
+                                    const blob = await generateArticlePdfBlob({
+                                        title,
+                                        content: exportContent,
+                                        editorSettings,
+                                        mediaItems,
+                                        locale,
+                                        footnotesTitle: t(
+                                            'articles.editor.footnotes',
+                                        ),
+                                    });
+
+                                    const formData = new FormData();
+                                    formData.append(
+                                        'file',
+                                        blob,
+                                        `${title || 'article'}.pdf`,
+                                    );
+
+                                    router.post(
+                                        storeArticlePdf.url({
+                                            article: articleId,
+                                        }),
+                                        formData,
+                                        {
+                                            forceFormData: true,
+                                            onFinish: () =>
+                                                setPdfExporting(false),
+                                            onError: () => {
+                                                toast.error(
+                                                    t(
+                                                        'articles.pdf.export_failed',
+                                                    ),
+                                                );
+                                            },
+                                        },
+                                    );
+                                } catch (error) {
+                                    console.error('PDF export failed', error);
+                                    setPdfExporting(false);
+                                    toast.error(
+                                        t('articles.pdf.export_failed'),
+                                    );
+                                }
+                            }}
+                        >
+                            {pdfExporting ? (
+                                <Spinner className="size-4" />
+                            ) : (
+                                <FileText className="size-4" />
+                            )}
+                            {pdfExporting
+                                ? t('articles.pdf.exporting')
+                                : t('articles.pdf.export')}
+                        </Button>
+                    )}
+
+                    {articleId !== undefined && (
                         <Button variant="ghost" size="sm" asChild>
                             <Link
                                 href={metadataEdit({ article: articleId })}
@@ -635,12 +713,19 @@ export default function ArticleDocumentEditor({
         mediaItems.length,
         openFootnoteDialog,
         openFootnotesSheet,
+        pdfExporting,
         processing,
         setChrome,
         status,
         onStatusChange,
         versions,
         t,
+        locale,
+        title,
+        content,
+        editor,
+        editorSettings,
+        mediaItems,
     ]);
 
     useEffect(() => {

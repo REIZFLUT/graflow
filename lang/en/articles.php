@@ -137,4 +137,28 @@ return [
         'with_publication' => ':publication – Issue :issue',
         'issue_only' => 'Issue :issue',
     ],
+
+    'pdf' => [
+        'generated_title' => 'PDF export – :title (:date)',
+        'annotated_title' => 'Annotated PDF – :title (:date)',
+        'export' => 'Export PDF',
+        'exporting' => 'Generating PDF…',
+        'export_failed' => 'PDF could not be generated.',
+        'viewer_title' => 'PDF – :title',
+        'back_to_editor' => 'Back to editor',
+        'save_annotated' => 'Save annotated PDF',
+        'saving_annotated' => 'Saving…',
+        'loading_engine' => 'Loading PDF engine…',
+        'tools' => [
+            'highlight' => 'Highlight',
+            'ink' => 'Pen',
+            'square' => 'Rectangle',
+            'delete' => 'Delete',
+        ],
+        'history' => 'PDF versions',
+        'kind' => [
+            'generated' => 'Generated',
+            'annotated' => 'Annotated',
+        ],
+    ],
 ];

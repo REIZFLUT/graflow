@@ -3,6 +3,7 @@
 use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\ArticleMediaController;
 use App\Http\Controllers\ArticleMetadataController;
+use App\Http\Controllers\ArticlePdfController;
 use App\Http\Controllers\ArticleVersionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EditorSettingsSetController;
@@ -27,6 +28,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('articles.metadata.update');
     Route::post('articles/{article}/versions/{version}/restore', [ArticleVersionController::class, 'restore'])
         ->name('articles.versions.restore');
+
+    Route::prefix('articles/{article}/pdfs')->name('articles.pdfs.')->group(function () {
+        Route::get('/', [ArticlePdfController::class, 'index'])->name('index');
+        Route::post('/', [ArticlePdfController::class, 'store'])->name('store');
+        Route::get('{pdf}', [ArticlePdfController::class, 'show'])->name('show');
+        Route::get('{pdf}/file', [ArticlePdfController::class, 'file'])->name('file');
+        Route::post('{pdf}/annotated', [ArticlePdfController::class, 'storeAnnotated'])->name('annotated.store');
+    });
 
     Route::resource('editor-settings-sets', EditorSettingsSetController::class)->except(['show']);
 

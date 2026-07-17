@@ -4,13 +4,14 @@ namespace App\Models;
 
 use App\Enums\ArticleStatus;
 use Database\Factories\ArticleFactory;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * @property int $id
@@ -25,9 +26,10 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  * @property-read User $owner
  * @property-read PublicationIssue|null $publicationIssue
- * @property-read \Illuminate\Database\Eloquent\Collection<int, PublicationCategory> $publicationCategories
- * @property-read \Illuminate\Database\Eloquent\Collection<int, ArticleVersion> $versions
- * @property-read \Illuminate\Database\Eloquent\Collection<int, ArticleMedia> $media
+ * @property-read Collection<int, PublicationCategory> $publicationCategories
+ * @property-read Collection<int, ArticleVersion> $versions
+ * @property-read Collection<int, ArticleMedia> $media
+ * @property-read Collection<int, ArticlePdf> $pdfs
  */
 class Article extends Model
 {
@@ -81,6 +83,14 @@ class Article extends Model
     public function media(): HasMany
     {
         return $this->hasMany(ArticleMedia::class);
+    }
+
+    /**
+     * @return HasMany<ArticlePdf, $this>
+     */
+    public function pdfs(): HasMany
+    {
+        return $this->hasMany(ArticlePdf::class);
     }
 
     /**

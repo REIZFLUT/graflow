@@ -7,6 +7,7 @@ Graflow ist eine redaktionelle Workflow-Anwendung zum Erstellen und Verwalten vo
 ## Funktionen
 
 - **Artikel** — Erstellen, Bearbeiten und Verwalten von Artikeln mit TipTap-Editor (Formatierung, Tabellen, Bilder, Fußnoten, Marginalien, Mathematik, Info-Boxen)
+- **PDF-Export** — Clientseitige PDF-Erzeugung mit [React-PDF](https://react-pdf.org/), Speicherung auf dem Server, Anzeige und Annotation
 - **Versionierung** — Automatische Artikelversionen mit Wiederherstellung früherer Stände
 - **Medien** — Bild-Upload mit Staging-Bereich, Vorschau-Varianten und Metadaten
 - **Publikationen** — Organisation von Artikeln in Publikationen mit Ausgaben (Issues) und Kategorien
@@ -25,6 +26,7 @@ Graflow ist eine redaktionelle Workflow-Anwendung zum Erstellen und Verwalten vo
 | Styling | Tailwind CSS v4, shadcn/ui |
 | Auth | Laravel Fortify, Passkeys |
 | Routing (Frontend) | Laravel Wayfinder |
+| PDF-Export | [@react-pdf/renderer](https://react-pdf.org/) (Browser), EmbedPDF (Anzeige/Annotation) |
 
 ## Voraussetzungen
 
@@ -67,6 +69,33 @@ php artisan db:seed
 ```
 
 Passe die Datenbankverbindung in `.env` an, bevor du migrierst und seedest.
+
+## PDF-Export
+
+PDFs werden **im Browser** aus dem TipTap-Inhalt erzeugt ([@react-pdf/renderer](https://react-pdf.org/)) und anschließend als Datei an den Server hochgeladen. Es sind **kein Headless Chrome, kein Puppeteer und keine Node.js-Laufzeit auf dem Server** nötig.
+
+### Ablauf
+
+1. Im Artikel-Editor: **PDF exportieren** → React-PDF rendert das Dokument clientseitig
+2. Das PDF wird per `POST` an `articles/{article}/pdfs` hochgeladen und gespeichert
+3. Anzeige und Annotation erfolgen über EmbedPDF auf der PDF-Seite
+
+### Server-Anforderungen
+
+| Komponente | Anforderung |
+|------------|-------------|
+| PHP | 8.4+ (nur Upload & Speicherung) |
+| Frontend-Build | `npm run build` — `@react-pdf/renderer` ist Teil des JS-Bundles |
+| Storage | Schreibzugriff auf die in `ARTICLE_PDF_DISK` konfigurierte Disk (Standard: `local`) |
+| Netzwerk (Browser) | Beim Export Zugriff auf `fonts.bunny.net` (Spectral/Roboto) |
+
+### Optionale Umgebungsvariable
+
+| Variable | Standard | Beschreibung |
+|----------|----------|--------------|
+| `ARTICLE_PDF_DISK` | `local` | Storage-Disk für generierte und annotierte PDFs |
+
+Konfiguration: `config/article-pdf.php`
 
 ## Demo-Zugangsdaten
 

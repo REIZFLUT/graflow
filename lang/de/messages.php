@@ -8,6 +8,8 @@ return [
         'metadata_saved' => 'Artikel-Metadaten gespeichert.',
         'image_in_use' => 'Dieses Bild wird noch im Artikel verwendet.',
         'version_restored' => 'Version wiederhergestellt.',
+        'pdf_generated' => 'PDF erzeugt.',
+        'pdf_annotated_saved' => 'Annotiertes PDF gespeichert.',
     ],
     'publications' => [
         'created' => 'Publikation erstellt.',
