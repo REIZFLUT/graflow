@@ -19,6 +19,14 @@ class DashboardTest extends TestCase
         $response->assertRedirect(route('login'));
     }
 
+    public function test_dashboard_aborts_when_unauthenticated_without_middleware(): void
+    {
+        $this->withoutMiddleware();
+
+        $this->get(route('dashboard'))
+            ->assertForbidden();
+    }
+
     public function test_authenticated_users_can_visit_the_dashboard()
     {
         $user = User::factory()->editor()->create();

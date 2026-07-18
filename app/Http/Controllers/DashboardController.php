@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\EditorSettingsSet;
 use App\Models\Publication;
+use App\Models\User;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -13,6 +14,8 @@ class DashboardController extends Controller
     {
         $user = auth()->user();
 
+        abort_unless($user instanceof User, 403);
+
         $stats = [
             'articles' => $user->articles()->count(),
             'publications' => Publication::query()
@@ -20,7 +23,7 @@ class DashboardController extends Controller
                 ->count(),
         ];
 
-        if ($user?->canManageEditorSettingsSets()) {
+        if ($user->canManageEditorSettingsSets()) {
             $stats['editorSettingsSets'] = EditorSettingsSet::query()
                 ->where('owner_id', $user->id)
                 ->count();
