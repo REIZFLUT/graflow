@@ -2,8 +2,9 @@
 
 namespace App\Models;
 
-use App\Enums\PublicationEditorFont;
 use Database\Factories\PublicationFactory;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -19,8 +20,8 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  * @property-read User $owner
  * @property-read EditorSettingsSet|null $editorSettingsSet
- * @property-read \Illuminate\Database\Eloquent\Collection<int, PublicationIssue> $issues
- * @property-read \Illuminate\Database\Eloquent\Collection<int, PublicationCategory> $categories
+ * @property-read Collection<int, PublicationIssue> $issues
+ * @property-read Collection<int, PublicationCategory> $categories
  */
 class Publication extends Model
 {
@@ -66,5 +67,31 @@ class Publication extends Model
     public function categories(): HasMany
     {
         return $this->hasMany(PublicationCategory::class);
+    }
+
+    /**
+     * @param  Builder<Publication>  $query
+     * @return Builder<Publication>
+     */
+    public function scopeVisibleTo(Builder $query, User $user): Builder
+    {
+        return $query->where(function (Builder $visible) use ($user): void {
+            $visible
+                ->where('owner_id', $user->id)
+                ->orWhereHas(
+                    'issues.articles',
+                    fn (Builder $articles) => $articles->where('owner_id', $user->id),
+                );
+        });
+    }
+
+    public function isContributedToBy(User $user): bool
+    {
+        return $this->issues()
+            ->whereHas(
+                'articles',
+                fn (Builder $articles) => $articles->where('owner_id', $user->id),
+            )
+            ->exists();
     }
 }

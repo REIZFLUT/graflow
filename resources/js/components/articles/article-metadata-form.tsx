@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { usePage } from '@inertiajs/react';
 import InputError from '@/components/input-error';
 import { Label } from '@/components/ui/label';
 import SearchableMultiSelect from '@/components/ui/searchable-multi-select';
@@ -22,6 +23,7 @@ import type {
 
 type ArticleMetadataFormProps = {
     publications: Publication[];
+    assignedPublicationId?: number | null;
     publicationIssueId: number | null;
     onPublicationIssueIdChange: (issueId: number | null) => void;
     publicationCategoryIds: number[];
@@ -41,6 +43,7 @@ const NONE_VALUE = '__none__';
 
 export default function ArticleMetadataForm({
     publications,
+    assignedPublicationId = null,
     publicationIssueId,
     onPublicationIssueIdChange,
     publicationCategoryIds,
@@ -52,6 +55,8 @@ export default function ArticleMetadataForm({
     errors,
 }: ArticleMetadataFormProps) {
     const { t } = useTranslation();
+    const { can } = usePage().props;
+    const canManageEditorSettingsSets = can.manageEditorSettingsSets;
 
     const initialPublicationId = useMemo(() => {
         if (!publicationIssueId) {
@@ -68,8 +73,8 @@ export default function ArticleMetadataForm({
             }
         }
 
-        return null;
-    }, [publicationIssueId, publications]);
+        return assignedPublicationId;
+    }, [assignedPublicationId, publicationIssueId, publications]);
 
     const [selectedPublicationId, setSelectedPublicationId] = useState<
         number | null
@@ -331,106 +336,108 @@ export default function ArticleMetadataForm({
                 <InputError message={errors.publication_category_ids} />
             </section>
 
-            <section className="space-y-4">
-                <div>
-                    <h3 className="text-base font-medium">
-                        {t('articles.metadata.editor_settings.heading')}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                        {t('articles.metadata.editor_settings.description')}
-                    </p>
-                </div>
+            {canManageEditorSettingsSets && (
+                <section className="space-y-4">
+                    <div>
+                        <h3 className="text-base font-medium">
+                            {t('articles.metadata.editor_settings.heading')}
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                            {t('articles.metadata.editor_settings.description')}
+                        </p>
+                    </div>
 
-                <div className="grid max-w-lg gap-6">
-                    <p className="text-sm text-muted-foreground">
-                        {t('articles.metadata.editor_settings.default')}{' '}
-                        {defaultEditorSettingsSet ? (
-                            <>
-                                {defaultEditorSettingsSet.name} (
-                                {formatEditorSettingsSetSummary(
-                                    defaultEditorSettingsSet,
-                                    t,
-                                )}
+                    <div className="grid max-w-lg gap-6">
+                        <p className="text-sm text-muted-foreground">
+                            {t('articles.metadata.editor_settings.default')}{' '}
+                            {defaultEditorSettingsSet ? (
+                                <>
+                                    {defaultEditorSettingsSet.name} (
+                                    {formatEditorSettingsSetSummary(
+                                        defaultEditorSettingsSet,
+                                        t,
+                                    )}
+                                    )
+                                </>
+                            ) : (
+                                t(
+                                    'articles.metadata.editor_settings.default_fallback',
                                 )
-                            </>
-                        ) : (
-                            t(
-                                'articles.metadata.editor_settings.default_fallback',
-                            )
-                        )}
-                    </p>
+                            )}
+                        </p>
 
-                    {editorSettingsSets.length > 0 ? (
-                        <div className="grid gap-2">
-                            <Label htmlFor="editor_settings_set_id">
-                                {t('common.set')}
-                            </Label>
-                            <Select
-                                value={
-                                    editorSettingsSetId
-                                        ? String(editorSettingsSetId)
-                                        : NONE_VALUE
-                                }
-                                onValueChange={(value) => {
-                                    onEditorSettingsSetIdChange(
-                                        value === NONE_VALUE
-                                            ? null
-                                            : Number(value),
-                                    );
-                                }}
-                            >
-                                <SelectTrigger
-                                    id="editor_settings_set_id"
-                                    className="w-full"
+                        {editorSettingsSets.length > 0 ? (
+                            <div className="grid gap-2">
+                                <Label htmlFor="editor_settings_set_id">
+                                    {t('common.set')}
+                                </Label>
+                                <Select
+                                    value={
+                                        editorSettingsSetId
+                                            ? String(editorSettingsSetId)
+                                            : NONE_VALUE
+                                    }
+                                    onValueChange={(value) => {
+                                        onEditorSettingsSetIdChange(
+                                            value === NONE_VALUE
+                                                ? null
+                                                : Number(value),
+                                        );
+                                    }}
                                 >
-                                    <SelectValue
-                                        placeholder={t(
-                                            'articles.metadata.editor_settings.use_default',
-                                        )}
-                                    />
-                                </SelectTrigger>
-                                <SelectContent side="top">
-                                    <SelectItem value={NONE_VALUE}>
-                                        {t(
-                                            'articles.metadata.editor_settings.use_default',
-                                        )}
-                                    </SelectItem>
-                                    {editorSettingsSets.map((set) => (
-                                        <SelectItem
-                                            key={set.id}
-                                            value={String(set.id)}
-                                        >
-                                            {set.name} (
-                                            {formatEditorSettingsSetSummary(
-                                                set,
-                                                t,
+                                    <SelectTrigger
+                                        id="editor_settings_set_id"
+                                        className="w-full"
+                                    >
+                                        <SelectValue
+                                            placeholder={t(
+                                                'articles.metadata.editor_settings.use_default',
                                             )}
-                                            )
+                                        />
+                                    </SelectTrigger>
+                                    <SelectContent side="top">
+                                        <SelectItem value={NONE_VALUE}>
+                                            {t(
+                                                'articles.metadata.editor_settings.use_default',
+                                            )}
                                         </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <InputError
-                                message={errors.editor_settings_set_id}
-                            />
-                        </div>
-                    ) : (
-                        <div className="rounded-lg border border-dashed border-sidebar-border/70 p-4 text-sm text-muted-foreground dark:border-sidebar-border">
-                            <p>
-                                {t(
-                                    'articles.metadata.editor_settings.create_set_hint',
-                                )}
-                            </p>
-                            <a
-                                href={createEditorSettingsSet.url()}
-                                className="mt-2 inline-block underline"
-                            >
-                                {t('common.create_set')}
-                            </a>
-                        </div>
-                    )}
-                </div>
-            </section>
+                                        {editorSettingsSets.map((set) => (
+                                            <SelectItem
+                                                key={set.id}
+                                                value={String(set.id)}
+                                            >
+                                                {set.name} (
+                                                {formatEditorSettingsSetSummary(
+                                                    set,
+                                                    t,
+                                                )}
+                                                )
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <InputError
+                                    message={errors.editor_settings_set_id}
+                                />
+                            </div>
+                        ) : (
+                            <div className="rounded-lg border border-dashed border-sidebar-border/70 p-4 text-sm text-muted-foreground dark:border-sidebar-border">
+                                <p>
+                                    {t(
+                                        'articles.metadata.editor_settings.create_set_hint',
+                                    )}
+                                </p>
+                                <a
+                                    href={createEditorSettingsSet.url()}
+                                    className="mt-2 inline-block underline"
+                                >
+                                    {t('common.create_set')}
+                                </a>
+                            </div>
+                        )}
+                    </div>
+                </section>
+            )}
         </div>
     );
 }

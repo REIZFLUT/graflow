@@ -48,6 +48,7 @@ export type ArticleVersion = {
     version_number: number;
     title: string;
     content: TipTapDocument | null;
+    status: string | null;
     created_by_id: number;
     created_at: string;
     created_by?: {

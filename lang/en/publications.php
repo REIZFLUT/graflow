@@ -6,10 +6,14 @@ return [
     'new' => 'New publication',
     'empty' => 'You have not created any publications yet.',
     'create_first' => 'Create your first publication',
+    'view' => 'View',
+    'owned_by' => 'Owner: :name',
+    'owner_notice' => 'This publication belongs to :name. You can only view it.',
 
     'table' => [
         'name' => 'Name',
         'issues' => 'Issues',
+        'owner' => 'Owner',
     ],
 
     'create' => [
@@ -23,7 +27,9 @@ return [
 
     'edit' => [
         'description' => 'Edit the publication, its issues, and categories',
+        'readonly_description' => 'Overview of the publication, its issues, and categories',
         'editor_settings_description' => 'Choose a set for articles in this publication in the editor.',
+        'no_editor_settings' => 'No editor settings set assigned.',
         'delete_heading' => 'Delete publication',
         'delete_description' => 'All issues and categories will also be deleted.',
     ],
@@ -31,6 +37,7 @@ return [
     'issues' => [
         'heading' => 'Issues',
         'description' => 'Manage the issues of this publication, e.g. 07-2026.',
+        'readonly_description' => 'Issues of this publication',
         'empty' => 'No issues created yet.',
         'table' => [
             'label' => 'Label',
@@ -49,6 +56,7 @@ return [
     'categories' => [
         'heading' => 'Categories',
         'description' => 'Define the categories that can be assigned to articles in this publication.',
+        'readonly_description' => 'Categories of this publication',
         'empty' => 'No categories created yet.',
         'table' => [
             'name' => 'Name',

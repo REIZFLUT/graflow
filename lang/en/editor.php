@@ -80,6 +80,20 @@ return [
         'table_delete_column' => 'Delete column',
         'table_toggle_header_row' => 'Toggle header row',
         'table_delete' => 'Delete table',
+        'spellcheck' => 'Check spelling',
+    ],
+
+    'spellcheck' => [
+        'checking' => 'Checking…',
+        'not_run' => 'Not checked yet. Start a check from the toolbar.',
+        'empty' => 'No issues found.',
+        'empty_document' => 'No text available to check.',
+        'no_issues' => 'No spelling or grammar issues found.',
+        'issues_found' => ':count issues found',
+        'error' => 'Spell check failed.',
+        'dismiss' => 'Dismiss',
+        'apply' => 'Apply',
+        'no_suggestions' => 'No suggestions',
     ],
 
     'format' => [

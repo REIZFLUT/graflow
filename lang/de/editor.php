@@ -80,6 +80,20 @@ return [
         'table_delete_column' => 'Spalte löschen',
         'table_toggle_header_row' => 'Kopfzeile umschalten',
         'table_delete' => 'Tabelle löschen',
+        'spellcheck' => 'Rechtschreibung prüfen',
+    ],
+
+    'spellcheck' => [
+        'checking' => 'Prüfung läuft…',
+        'not_run' => 'Noch nicht geprüft. Starte die Prüfung über die Toolbar.',
+        'empty' => 'Keine Fehler gefunden.',
+        'empty_document' => 'Kein Text zum Prüfen vorhanden.',
+        'no_issues' => 'Keine Rechtschreib- oder Grammatikfehler gefunden.',
+        'issues_found' => ':count Hinweise gefunden',
+        'error' => 'Rechtschreibprüfung fehlgeschlagen.',
+        'dismiss' => 'Verwerfen',
+        'apply' => 'Übernehmen',
+        'no_suggestions' => 'Keine Vorschläge',
     ],
 
     'format' => [

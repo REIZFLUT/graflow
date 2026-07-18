@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ArticleStatus;
 use Database\Factories\ArticleVersionFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -14,6 +15,7 @@ use Illuminate\Support\Carbon;
  * @property int $version_number
  * @property string $title
  * @property array<string, mixed>|null $content
+ * @property ArticleStatus|null $status
  * @property int $created_by_id
  * @property Carbon|null $created_at
  * @property-read Article $article
@@ -34,6 +36,7 @@ class ArticleVersion extends Model
         'version_number',
         'title',
         'content',
+        'status',
         'created_by_id',
         'created_at',
     ];
@@ -45,6 +48,7 @@ class ArticleVersion extends Model
     {
         return [
             'content' => 'array',
+            'status' => ArticleStatus::class,
             'created_at' => 'datetime',
         ];
     }

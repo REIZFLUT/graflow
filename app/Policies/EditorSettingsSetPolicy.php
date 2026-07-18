@@ -9,26 +9,29 @@ class EditorSettingsSetPolicy
 {
     public function viewAny(User $user): bool
     {
-        return true;
+        return $user->canManageEditorSettingsSets();
     }
 
     public function view(User $user, EditorSettingsSet $editorSettingsSet): bool
     {
-        return $user->id === $editorSettingsSet->owner_id;
+        return $user->canManageEditorSettingsSets()
+            && $user->id === $editorSettingsSet->owner_id;
     }
 
     public function create(User $user): bool
     {
-        return true;
+        return $user->canManageEditorSettingsSets();
     }
 
     public function update(User $user, EditorSettingsSet $editorSettingsSet): bool
     {
-        return $user->id === $editorSettingsSet->owner_id;
+        return $user->canManageEditorSettingsSets()
+            && $user->id === $editorSettingsSet->owner_id;
     }
 
     public function delete(User $user, EditorSettingsSet $editorSettingsSet): bool
     {
-        return $user->id === $editorSettingsSet->owner_id;
+        return $user->canManageEditorSettingsSets()
+            && $user->id === $editorSettingsSet->owner_id;
     }
 }

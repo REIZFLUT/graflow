@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\ArticleStatus;
 use App\Models\Article;
 use App\Models\ArticleVersion;
 use App\Models\User;
@@ -32,6 +33,7 @@ class ArticleVersionFactory extends Factory
                     ],
                 ],
             ],
+            'status' => ArticleStatus::Draft,
             'created_by_id' => User::factory(),
             'created_at' => now(),
         ];

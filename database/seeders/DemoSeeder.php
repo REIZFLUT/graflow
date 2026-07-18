@@ -10,6 +10,8 @@ use App\Models\Publication;
 use App\Models\PublicationCategory;
 use App\Models\PublicationIssue;
 use App\Models\User;
+use App\Services\ArticleMediaService;
+use App\Services\ArticleVersionService;
 use Database\Seeders\Support\DemoArticleContentBuilder;
 use Database\Seeders\Support\DemoCopyrightParser;
 use Database\Seeders\Support\DemoMediaImporter;
@@ -72,10 +74,10 @@ class DemoSeeder extends Seeder
         $categories = $this->seedCategories($bookPublication, $magazinePublication);
 
         $contentBuilder = new DemoArticleContentBuilder(
-            new DemoMediaImporter(app(\App\Services\ArticleMediaService::class)),
+            new DemoMediaImporter(app(ArticleMediaService::class)),
         );
 
-        $mediaImporter = new DemoMediaImporter(app(\App\Services\ArticleMediaService::class));
+        $mediaImporter = new DemoMediaImporter(app(ArticleMediaService::class));
         $imageFilenames = $mediaImporter->availableImageFilenames();
         $imageIndex = 0;
 
@@ -139,6 +141,148 @@ class DemoSeeder extends Seeder
                 $article->publicationCategories()->syncWithoutDetaching([$categories[$categoryKey]->id]);
             }
         }
+
+        $this->seedVersionComparisonExample($issues);
+    }
+
+    /**
+     * Seed an article with a realistic version history so the version comparison
+     * feature can be demonstrated: several draft edits, a publish, then a few
+     * published edits. This mirrors the "last draft vs. latest published" case.
+     *
+     * @param  array<string, PublicationIssue>  $issues
+     */
+    private function seedVersionComparisonExample(array $issues): void
+    {
+        $author = User::query()->where('email', 'pia.maier@example.com')->firstOrFail();
+        $issue = $issues['magazine-03-2026'];
+
+        $title = 'Versionsvergleich: Wärmepumpen im Gebäudebestand';
+
+        $alreadySeeded = Article::query()
+            ->where('title', $title)
+            ->where('owner_id', $author->id)
+            ->exists();
+
+        if ($alreadySeeded) {
+            return;
+        }
+
+        $versionService = app(ArticleVersionService::class);
+
+        /** @var list<array{title: string, status: ArticleStatus, paragraphs: list<string>}> $stages */
+        $stages = [
+            [
+                'title' => 'Wärmepumpen im Bestand',
+                'status' => ArticleStatus::Draft,
+                'paragraphs' => [
+                    'Wärmepumpen sind eine Option für Neubauten.',
+                ],
+            ],
+            [
+                'title' => 'Wärmepumpen im Bestand',
+                'status' => ArticleStatus::Draft,
+                'paragraphs' => [
+                    'Wärmepumpen sind eine gute Option für Neubauten.',
+                    'Im Gebäudebestand ist der Einsatz komplizierter.',
+                ],
+            ],
+            [
+                'title' => 'Wärmepumpen im Bestand',
+                'status' => ArticleStatus::Draft,
+                'paragraphs' => [
+                    'Wärmepumpen sind eine gute Option für Neubauten und Sanierungen.',
+                    'Im Gebäudebestand ist der Einsatz mit sorgfältiger Planung gut möglich.',
+                ],
+            ],
+            [
+                'title' => 'Wärmepumpen im Gebäudebestand',
+                'status' => ArticleStatus::Draft,
+                'paragraphs' => [
+                    'Wärmepumpen sind eine gute Option für Neubauten und Sanierungen.',
+                    'Im Gebäudebestand ist der Einsatz mit sorgfältiger Planung gut möglich.',
+                    'Entscheidend sind die Vorlauftemperatur und der Dämmstandard.',
+                ],
+            ],
+            [
+                'title' => 'Wärmepumpen im Gebäudebestand',
+                'status' => ArticleStatus::Draft,
+                'paragraphs' => [
+                    'Wärmepumpen sind eine gute Option für Neubauten und Sanierungen.',
+                    'Im Gebäudebestand ist der Einsatz mit sorgfältiger Planung gut möglich, wenn die Heizlast bekannt ist.',
+                    'Entscheidend sind die Vorlauftemperatur und der Dämmstandard des Gebäudes.',
+                ],
+            ],
+            [
+                'title' => 'Wärmepumpen im Gebäudebestand',
+                'status' => ArticleStatus::Published,
+                'paragraphs' => [
+                    'Wärmepumpen sind eine gute Option für Neubauten und Sanierungen.',
+                    'Im Gebäudebestand ist der Einsatz mit sorgfältiger Planung gut möglich, wenn die Heizlast bekannt ist.',
+                    'Entscheidend sind die Vorlauftemperatur und der Dämmstandard des Gebäudes.',
+                ],
+            ],
+            [
+                'title' => 'Wärmepumpen im Gebäudebestand',
+                'status' => ArticleStatus::Published,
+                'paragraphs' => [
+                    'Wärmepumpen sind in vielen Fällen eine sehr gute Option für Neubauten und Sanierungen.',
+                    'Im Gebäudebestand ist der Einsatz mit sorgfältiger Planung gut möglich, wenn die Heizlast korrekt ermittelt wurde.',
+                    'Entscheidend sind die Vorlauftemperatur und der Dämmstandard des Gebäudes.',
+                ],
+            ],
+            [
+                'title' => 'Wärmepumpen im Gebäudebestand: Praxisleitfaden',
+                'status' => ArticleStatus::Published,
+                'paragraphs' => [
+                    'Wärmepumpen sind in vielen Fällen eine sehr gute Option für Neubauten und Sanierungen.',
+                    'Im Gebäudebestand ist der Einsatz mit sorgfältiger Planung gut möglich, wenn die Heizlast korrekt ermittelt wurde.',
+                    'Entscheidend sind die Vorlauftemperatur, der hydraulische Abgleich und der Dämmstandard des Gebäudes.',
+                ],
+            ],
+        ];
+
+        $firstStage = $stages[0];
+
+        $article = Article::query()->create([
+            'title' => $firstStage['title'],
+            'content' => $this->comparisonDoc($firstStage['paragraphs']),
+            'owner_id' => $author->id,
+            'status' => $firstStage['status'],
+            'publication_issue_id' => $issue->id,
+        ]);
+
+        $versionService->snapshot($article, $author);
+
+        foreach (array_slice($stages, 1) as $stage) {
+            $article->update([
+                'title' => $stage['title'],
+                'content' => $this->comparisonDoc($stage['paragraphs']),
+                'status' => $stage['status'],
+            ]);
+
+            $versionService->snapshot($article, $author);
+        }
+    }
+
+    /**
+     * @param  list<string>  $paragraphs
+     * @return array<string, mixed>
+     */
+    private function comparisonDoc(array $paragraphs): array
+    {
+        return [
+            'type' => 'doc',
+            'content' => array_map(
+                fn (string $text): array => [
+                    'type' => 'paragraph',
+                    'content' => [
+                        ['type' => 'text', 'text' => $text],
+                    ],
+                ],
+                $paragraphs,
+            ),
+        ];
     }
 
     /**

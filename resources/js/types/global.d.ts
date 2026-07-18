@@ -16,6 +16,9 @@ declare module '@inertiajs/core' {
             locale: string;
             translations: AppTranslations;
             auth: Auth;
+            can: {
+                manageEditorSettingsSets: boolean;
+            };
             sidebarOpen: boolean;
             [key: string]: unknown;
         };

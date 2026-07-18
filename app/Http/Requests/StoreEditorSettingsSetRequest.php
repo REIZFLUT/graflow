@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\PublicationEditorFont;
+use App\Models\EditorSettingsSet;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -11,7 +12,7 @@ class StoreEditorSettingsSetRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user() !== null;
+        return $this->user()?->can('create', EditorSettingsSet::class) ?? false;
     }
 
     /**

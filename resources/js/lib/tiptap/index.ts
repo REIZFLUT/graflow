@@ -1,13 +1,10 @@
+import { BlockMath, InlineMath } from '@tiptap/extension-mathematics';
 import Placeholder from '@tiptap/extension-placeholder';
 import Subscript from '@tiptap/extension-subscript';
 import Superscript from '@tiptap/extension-superscript';
-import UniqueID from '@tiptap/extension-unique-id';
-import {
-    BlockMath,
-    InlineMath,
-} from '@tiptap/extension-mathematics';
-import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { TableKit } from '@tiptap/extension-table/kit';
+import UniqueID from '@tiptap/extension-unique-id';
+import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import StarterKit from '@tiptap/starter-kit';
 import { ArticleImage } from '@/lib/tiptap/article-image';
 import { CharacterFormat } from '@/lib/tiptap/character-format';
@@ -15,8 +12,13 @@ import { FootnoteMark } from '@/lib/tiptap/footnote-mark';
 import { InfoBox } from '@/lib/tiptap/info-box';
 import { MarginalNote } from '@/lib/tiptap/marginal-note';
 import { ParagraphFormat } from '@/lib/tiptap/paragraph-format';
+import { SpellCheck } from '@/lib/tiptap/spellcheck';
+import { VersionDiffHighlight } from '@/lib/tiptap/version-diff-highlight';
 
-export { ArticleImage, type ArticleImageAttributes } from '@/lib/tiptap/article-image';
+export {
+    ArticleImage,
+    type ArticleImageAttributes,
+} from '@/lib/tiptap/article-image';
 export {
     deleteSelectedArticleImage,
     getArticleImageMediaIdsFromEditor,
@@ -27,7 +29,10 @@ export {
     syncArticleImagesFromMedia,
 } from '@/lib/tiptap/article-image-utils';
 
-export { MarginalNote, MARGINAL_NOTE_BLOCK_TYPES } from '@/lib/tiptap/marginal-note';
+export {
+    MarginalNote,
+    MARGINAL_NOTE_BLOCK_TYPES,
+} from '@/lib/tiptap/marginal-note';
 export {
     createBlockElements,
     createCharacterFormats,
@@ -38,7 +43,10 @@ export {
     type BlockElementDefinition,
     type SpecialFormatDefinition,
 } from '@/lib/tiptap/special-format-definitions';
-export { ParagraphFormat, getParagraphAtSelection } from '@/lib/tiptap/paragraph-format';
+export {
+    ParagraphFormat,
+    getParagraphAtSelection,
+} from '@/lib/tiptap/paragraph-format';
 export { CharacterFormat } from '@/lib/tiptap/character-format';
 export { InfoBox } from '@/lib/tiptap/info-box';
 export {
@@ -55,6 +63,23 @@ export {
     trimSelectionBounds,
     type ArticleFootnote,
 } from '@/lib/tiptap/footnote-utils';
+export {
+    SpellCheck,
+    focusSpellCheckMatch,
+    getSpellCheckMatchById,
+    getSpellCheckMatches,
+    spellCheckPluginKey,
+    type MappedSpellCheckMatch,
+} from '@/lib/tiptap/spellcheck';
+export {
+    extractPlainTextWithMap,
+    mapMatchesToPositions,
+    type LanguageToolMatch,
+} from '@/lib/tiptap/spellcheck-utils';
+export {
+    scrollEditorToPlainTextLine,
+    scrollEditorToTitle,
+} from '@/lib/tiptap/editor-navigation';
 
 export function createArticleEditorExtensions(options: {
     placeholder: string;
@@ -103,6 +128,8 @@ export function createArticleEditorExtensions(options: {
         InfoBox,
         FootnoteMark,
         ArticleImage,
+        SpellCheck,
+        VersionDiffHighlight,
         Placeholder.configure({
             placeholder: options.placeholder,
         }),

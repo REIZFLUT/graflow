@@ -26,7 +26,8 @@ class StorePublicationRequest extends FormRequest
                 Rule::unique('publications', 'name')->where('owner_id', $this->user()->id),
             ],
             'editor_settings_set_id' => [
-                'required',
+                Rule::prohibitedIf(fn () => ! $this->user()->canManageEditorSettingsSets()),
+                'nullable',
                 'integer',
                 Rule::exists('editor_settings_sets', 'id')->where('owner_id', $this->user()->id),
             ],

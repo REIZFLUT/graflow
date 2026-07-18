@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\PublicationEditorFont;
+use App\Models\EditorSettingsSet;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -11,7 +12,10 @@ class UpdateEditorSettingsSetRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user() !== null;
+        /** @var EditorSettingsSet $editorSettingsSet */
+        $editorSettingsSet = $this->route('editor_settings_set');
+
+        return $this->user()?->can('update', $editorSettingsSet) ?? false;
     }
 
     /**
@@ -19,7 +23,7 @@ class UpdateEditorSettingsSetRequest extends FormRequest
      */
     public function rules(): array
     {
-        /** @var \App\Models\EditorSettingsSet $editorSettingsSet */
+        /** @var EditorSettingsSet $editorSettingsSet */
         $editorSettingsSet = $this->route('editor_settings_set');
 
         return [

@@ -14,7 +14,8 @@ class PublicationPolicy
 
     public function view(User $user, Publication $publication): bool
     {
-        return $user->id === $publication->owner_id;
+        return $user->id === $publication->owner_id
+            || $publication->isContributedToBy($user);
     }
 
     public function create(User $user): bool

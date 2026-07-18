@@ -34,6 +34,11 @@ export type Publication = {
     owner_id: number;
     created_at: string;
     updated_at: string;
+    owner?: {
+        id: number;
+        name: string;
+    };
+    can_edit?: boolean;
     editor_settings_set?: import('./editor-settings-set').EditorSettingsSet;
     issues?: PublicationIssue[];
     categories?: PublicationCategory[];

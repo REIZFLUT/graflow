@@ -10,6 +10,7 @@ use App\Http\Controllers\EditorSettingsSetController;
 use App\Http\Controllers\PublicationCategoryController;
 use App\Http\Controllers\PublicationController;
 use App\Http\Controllers\PublicationIssueController;
+use App\Http\Controllers\SpellCheckController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -20,6 +21,9 @@ Route::get('/', function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
+
+    Route::post('spellcheck', [SpellCheckController::class, 'check'])
+        ->name('spellcheck.check');
 
     Route::resource('articles', ArticleController::class)->except(['show']);
     Route::get('articles/{article}/metadata', [ArticleMetadataController::class, 'edit'])

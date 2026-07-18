@@ -7,11 +7,11 @@ return [
     'stats' => [
         'articles' => [
             'label' => 'Artikel',
-            'description' => 'Gespeicherte Beiträge',
+            'description' => 'Deine gespeicherten Beiträge',
         ],
         'publications' => [
             'label' => 'Publikationen',
-            'description' => 'Aktive Publikationen',
+            'description' => 'Publikationen mit deinen Artikeln',
         ],
         'editor_settings' => [
             'label' => 'Editor-Profile',

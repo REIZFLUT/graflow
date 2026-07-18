@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Article;
+use App\Models\Publication;
 use App\Models\PublicationIssue;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -24,8 +25,8 @@ class UpdateArticleMetadataRequest extends FormRequest
      */
     public function rules(): array
     {
-        $userPublicationIds = $this->user()
-            ->publications()
+        $userPublicationIds = Publication::query()
+            ->visibleTo($this->user())
             ->pluck('id')
             ->all();
 
@@ -53,6 +54,7 @@ class UpdateArticleMetadataRequest extends FormRequest
                 ),
             ],
             'editor_settings_set_id' => [
+                Rule::prohibitedIf(fn () => ! $this->user()->canManageEditorSettingsSets()),
                 'nullable',
                 'integer',
                 Rule::exists('editor_settings_sets', 'id')->where('owner_id', $this->user()->id),

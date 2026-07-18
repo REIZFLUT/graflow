@@ -1,6 +1,14 @@
 import { Link, router } from '@inertiajs/react';
 import type { Editor } from '@tiptap/react';
-import { ArrowLeft, FileText, History, Image, Save, SquareAsterisk, Tags } from 'lucide-react';
+import {
+    ArrowLeft,
+    FileText,
+    History,
+    Image,
+    Save,
+    SquareAsterisk,
+    Tags,
+} from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import ArticleImageDialog from '@/components/articles/article-image-dialog';
@@ -9,14 +17,18 @@ import ArticleStatusSelect from '@/components/articles/article-status-select';
 import DocumentStatusBar from '@/components/articles/document-status-bar';
 import FootnoteDialog from '@/components/articles/footnote-dialog';
 import FootnotesPanel from '@/components/articles/footnotes-panel';
-import MathDialog, {
-    type MathDialogMode,
-    type MathDialogVariant,
-} from '@/components/articles/math-dialog';
 import MarginalNotesColumn from '@/components/articles/marginal-notes-column';
+import MathDialog from '@/components/articles/math-dialog';
+import type {
+    MathDialogMode,
+    MathDialogVariant,
+} from '@/components/articles/math-dialog';
+import SpellCheckPanel from '@/components/articles/spellcheck-panel';
+import SpellCheckPopover from '@/components/articles/spellcheck-popover';
 import TipTapEditor, {
     TipTapToolbar,
 } from '@/components/articles/tiptap-editor';
+import VersionCompare from '@/components/articles/version-compare';
 import VersionHistory from '@/components/articles/version-history';
 import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
@@ -31,35 +43,31 @@ import {
 } from '@/components/ui/sheet';
 import { Spinner } from '@/components/ui/spinner';
 import { useArticleEditorChrome } from '@/contexts/article-editor-chrome-context';
+import type { ArticleMediaFormData } from '@/hooks/use-article-media';
+import { useSpellCheck } from '@/hooks/use-spell-check';
 import { useTranslation } from '@/hooks/use-translation';
+import { generateArticlePdfBlob } from '@/lib/article-pdf/generate';
+import { getArticleStatusLabel } from '@/lib/article-status';
+import type { ArticleStatusValue } from '@/lib/article-status';
+import { combineDocumentText, getDocumentStats } from '@/lib/document-stats';
 import {
-    combineDocumentText,
-    getDocumentStats,
-} from '@/lib/document-stats';
-import {
+    deleteSelectedArticleImage,
+    focusFootnoteInEditor,
+    getArticleImageMediaIdsFromEditor,
     getFootnoteAtSelection,
     getFootnoteById,
     getFootnotesFromEditor,
-    focusFootnoteInEditor,
-    removeFootnoteById,
-    trimSelectionBounds,
-    type ArticleFootnote,
-    getArticleImageMediaIdsFromEditor,
-    insertArticleImage,
-    syncArticleImagesFromMedia,
-    deleteSelectedArticleImage,
     getSelectedArticleImage,
+    insertArticleImage,
+    removeFootnoteById,
+    syncArticleImagesFromMedia,
+    trimSelectionBounds,
 } from '@/lib/tiptap';
-import type { ArticleMediaFormData } from '@/hooks/use-article-media';
-import {
-    getArticleStatusLabel,
-    type ArticleStatusValue,
-} from '@/lib/article-status';
-import { generateArticlePdfBlob } from '@/lib/article-pdf/generate';
+import type { ArticleFootnote, MappedSpellCheckMatch } from '@/lib/tiptap';
 import { cn } from '@/lib/utils';
+import { index } from '@/routes/articles';
 import { edit as metadataEdit } from '@/routes/articles/metadata';
 import { store as storeArticlePdf } from '@/routes/articles/pdfs';
-import { index } from '@/routes/articles';
 import type {
     ArticleMedia,
     ArticleVersion,
@@ -118,6 +126,7 @@ export default function ArticleDocumentEditor({
 }: ArticleDocumentEditorProps) {
     const { t, locale } = useTranslation();
     const { setChrome, clearChrome } = useArticleEditorChrome();
+    const { isChecking, hasRun, runCheck } = useSpellCheck();
     const [editor, setEditor] = useState<Editor | null>(null);
     const [footnoteDialogOpen, setFootnoteDialogOpen] = useState(false);
     const [footnoteText, setFootnoteText] = useState('');
@@ -130,6 +139,15 @@ export default function ArticleDocumentEditor({
     const [focusedFootnoteId, setFocusedFootnoteId] = useState<string | null>(
         null,
     );
+    const [spellCheckSheetOpen, setSpellCheckSheetOpen] = useState(false);
+    const [focusedSpellCheckMatchId, setFocusedSpellCheckMatchId] = useState<
+        string | null
+    >(null);
+    const [spellCheckPopoverMatchId, setSpellCheckPopoverMatchId] = useState<
+        string | null
+    >(null);
+    const [spellCheckPopoverRect, setSpellCheckPopoverRect] =
+        useState<DOMRect | null>(null);
     const [editingFootnoteId, setEditingFootnoteId] = useState<string | null>(
         null,
     );
@@ -141,9 +159,7 @@ export default function ArticleDocumentEditor({
     const [imageDialogMode, setImageDialogMode] = useState<'upload' | 'edit'>(
         'upload',
     );
-    const [editingMedia, setEditingMedia] = useState<ArticleMedia | null>(
-        null,
-    );
+    const [editingMedia, setEditingMedia] = useState<ArticleMedia | null>(null);
     const [mediaSheetOpen, setMediaSheetOpen] = useState(false);
     const [mathDialogOpen, setMathDialogOpen] = useState(false);
     const [mathLatex, setMathLatex] = useState('');
@@ -151,14 +167,27 @@ export default function ArticleDocumentEditor({
     const [mathMode, setMathMode] = useState<MathDialogMode>('create');
     const [editingMathPos, setEditingMathPos] = useState<number | null>(null);
     const [pdfExporting, setPdfExporting] = useState(false);
+    const [versionView, setVersionView] = useState<'history' | 'compare'>(
+        'history',
+    );
+    const [versionSheetOpen, setVersionSheetOpen] = useState(false);
+    const [compareBaseId, setCompareBaseId] = useState<number | null>(
+        () => versions[1]?.id ?? null,
+    );
+    const [compareTargetId, setCompareTargetId] = useState<number | null>(
+        () => versions[0]?.id ?? null,
+    );
 
-    const openMathDialogForCreate = useCallback((variant: MathDialogVariant) => {
-        setMathVariant(variant);
-        setMathMode('create');
-        setMathLatex('');
-        setEditingMathPos(null);
-        setMathDialogOpen(true);
-    }, []);
+    const openMathDialogForCreate = useCallback(
+        (variant: MathDialogVariant) => {
+            setMathVariant(variant);
+            setMathMode('create');
+            setMathLatex('');
+            setEditingMathPos(null);
+            setMathDialogOpen(true);
+        },
+        [],
+    );
 
     const openMathDialogForEdit = useCallback(
         (variant: MathDialogVariant, latex: string, pos: number) => {
@@ -243,6 +272,7 @@ export default function ArticleDocumentEditor({
 
             if (media) {
                 openImageEditDialog(media);
+
                 return;
             }
 
@@ -385,6 +415,46 @@ export default function ArticleDocumentEditor({
             setFocusedFootnoteId(null);
         }
     };
+
+    const closeSpellCheckPopover = useCallback(() => {
+        setSpellCheckPopoverMatchId(null);
+        setSpellCheckPopoverRect(null);
+    }, []);
+
+    const handleSpellCheckMarkClick = useCallback(
+        (matchId: string, rect: DOMRect) => {
+            setSpellCheckPopoverMatchId(matchId);
+            setSpellCheckPopoverRect(rect);
+            setFocusedSpellCheckMatchId(matchId);
+        },
+        [],
+    );
+
+    const handleSpellCheckClick = useCallback(async () => {
+        if (!editor || isChecking) {
+            return;
+        }
+
+        closeSpellCheckPopover();
+        setSpellCheckSheetOpen(true);
+
+        await runCheck(editor);
+    }, [closeSpellCheckPopover, editor, isChecking, runCheck]);
+
+    const handleSpellCheckSheetOpenChange = (open: boolean) => {
+        setSpellCheckSheetOpen(open);
+
+        if (!open) {
+            setFocusedSpellCheckMatchId(null);
+        }
+    };
+
+    const handleFocusSpellCheckMatch = useCallback(
+        (match: MappedSpellCheckMatch) => {
+            setFocusedSpellCheckMatchId(match.id);
+        },
+        [],
+    );
 
     const openFootnoteDialog = useCallback(
         (footnote?: ArticleFootnote) => {
@@ -582,9 +652,9 @@ export default function ArticleDocumentEditor({
 
                                 try {
                                     const exportContent =
-                                        editor?.getJSON() as
-                                            | TipTapDocument
-                                            | undefined ?? content;
+                                        (editor?.getJSON() as
+                                            TipTapDocument | undefined) ??
+                                        content;
 
                                     const blob = await generateArticlePdfBlob({
                                         title,
@@ -655,7 +725,10 @@ export default function ArticleDocumentEditor({
                     )}
 
                     {articleId !== undefined && (
-                        <Sheet>
+                        <Sheet
+                            open={versionSheetOpen}
+                            onOpenChange={setVersionSheetOpen}
+                        >
                             <SheetTrigger asChild>
                                 <Button variant="ghost" size="sm">
                                     <History className="size-4" />
@@ -670,21 +743,78 @@ export default function ArticleDocumentEditor({
                                     )}
                                 </Button>
                             </SheetTrigger>
-                            <SheetContent className="w-full sm:max-w-md">
+                            <SheetContent
+                                className={cn(
+                                    'w-full',
+                                    versionView === 'compare'
+                                        ? 'sm:max-w-4xl'
+                                        : 'sm:max-w-md',
+                                )}
+                            >
                                 <SheetHeader className="border-b border-border/60 pb-4">
                                     <SheetTitle>
                                         {t('articles.editor.versions')}
                                     </SheetTitle>
                                     <SheetDescription>
-                                        {t('articles.editor.versions_sheet')}
+                                        {versionView === 'compare'
+                                            ? t(
+                                                  'articles.versions.compare_hint',
+                                              )
+                                            : t(
+                                                  'articles.editor.versions_sheet',
+                                              )}
                                     </SheetDescription>
                                 </SheetHeader>
                                 <div className="overflow-y-auto px-4 pb-6">
-                                    <VersionHistory
-                                        articleId={articleId}
-                                        versions={versions}
-                                        variant="compact"
-                                    />
+                                    <div className="flex gap-1 pt-4">
+                                        <Button
+                                            type="button"
+                                            variant={
+                                                versionView === 'history'
+                                                    ? 'secondary'
+                                                    : 'ghost'
+                                            }
+                                            size="sm"
+                                            onClick={() =>
+                                                setVersionView('history')
+                                            }
+                                        >
+                                            {t('articles.versions.history')}
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant={
+                                                versionView === 'compare'
+                                                    ? 'secondary'
+                                                    : 'ghost'
+                                            }
+                                            size="sm"
+                                            onClick={() =>
+                                                setVersionView('compare')
+                                            }
+                                        >
+                                            {t('articles.versions.compare')}
+                                        </Button>
+                                    </div>
+                                    {versionView === 'history' ? (
+                                        <VersionHistory
+                                            articleId={articleId}
+                                            versions={versions}
+                                            variant="compact"
+                                        />
+                                    ) : (
+                                        <VersionCompare
+                                            versions={versions}
+                                            editor={editor}
+                                            baseId={compareBaseId}
+                                            compareId={compareTargetId}
+                                            onBaseChange={setCompareBaseId}
+                                            onCompareChange={setCompareTargetId}
+                                            onNavigateToEditor={() =>
+                                                setVersionSheetOpen(false)
+                                            }
+                                        />
+                                    )}
                                 </div>
                             </SheetContent>
                         </Sheet>
@@ -719,11 +849,14 @@ export default function ArticleDocumentEditor({
         status,
         onStatusChange,
         versions,
+        versionView,
+        versionSheetOpen,
+        compareBaseId,
+        compareTargetId,
         t,
         locale,
         title,
         content,
-        editor,
         editorSettings,
         mediaItems,
     ]);
@@ -776,6 +909,10 @@ export default function ArticleDocumentEditor({
                     onRemoveArticleImage={handleRemoveSelectedArticleImage}
                     onInlineMathClick={() => openMathDialogForCreate('inline')}
                     onBlockMathClick={() => openMathDialogForCreate('block')}
+                    onSpellCheckClick={() => {
+                        void handleSpellCheckClick();
+                    }}
+                    isSpellChecking={isChecking}
                 />
             ),
         });
@@ -783,6 +920,8 @@ export default function ArticleDocumentEditor({
         editor,
         editorSettings.has_marginal_column,
         handleRemoveSelectedArticleImage,
+        handleSpellCheckClick,
+        isChecking,
         openFootnoteDialog,
         openImageUploadDialog,
         openMathDialogForCreate,
@@ -794,6 +933,8 @@ export default function ArticleDocumentEditor({
             return;
         }
 
+        // Seed the footnote count once the editor is ready; further updates come from editor events.
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- initial sync from TipTap editor state
         syncFootnoteCount();
 
         editor.on('update', syncFootnoteCount);
@@ -848,10 +989,7 @@ export default function ArticleDocumentEditor({
                             required
                             className="mb-8 w-full border-0 bg-transparent text-3xl font-bold tracking-tight text-foreground placeholder:text-muted-foreground/50 focus:outline-none md:text-4xl"
                         />
-                        <InputError
-                            className="mb-4"
-                            message={errors.title}
-                        />
+                        <InputError className="mb-4" message={errors.title} />
 
                         <div
                             className={cn(
@@ -866,6 +1004,9 @@ export default function ArticleDocumentEditor({
                                 onChange={onContentChange}
                                 onEditorReady={setEditor}
                                 onFootnoteMarkClick={openFootnotesSheet}
+                                onSpellCheckMarkClick={
+                                    handleSpellCheckMarkClick
+                                }
                                 onArticleImageDoubleClick={
                                     openImageEditDialogFromMediaId
                                 }
@@ -876,15 +1017,11 @@ export default function ArticleDocumentEditor({
                                     openMathDialogForEdit('block', latex, pos)
                                 }
                             />
-                            {editor &&
-                                editorSettings.has_marginal_column && (
-                                    <MarginalNotesColumn editor={editor} />
-                                )}
+                            {editor && editorSettings.has_marginal_column && (
+                                <MarginalNotesColumn editor={editor} />
+                            )}
                         </div>
-                        <InputError
-                            className="mt-4"
-                            message={errors.content}
-                        />
+                        <InputError className="mt-4" message={errors.content} />
                     </article>
                 </div>
             </form>
@@ -919,12 +1056,14 @@ export default function ArticleDocumentEditor({
             >
                 <SheetContent className="w-full sm:max-w-md">
                     <SheetHeader className="border-b border-border/60 pb-4">
-                        <SheetTitle>{t('articles.editor.footnotes')}</SheetTitle>
+                        <SheetTitle>
+                            {t('articles.editor.footnotes')}
+                        </SheetTitle>
                         <SheetDescription>
                             {t('articles.editor.footnotes_sheet')}
                         </SheetDescription>
                     </SheetHeader>
-                    <div className="overflow-y-auto px-4 pb-6 pt-4">
+                    <div className="overflow-y-auto px-4 pt-4 pb-6">
                         <FootnotesPanel
                             editor={editor}
                             onEditFootnote={openFootnoteDialog}
@@ -937,6 +1076,39 @@ export default function ArticleDocumentEditor({
                     </div>
                 </SheetContent>
             </Sheet>
+
+            <Sheet
+                open={spellCheckSheetOpen}
+                onOpenChange={handleSpellCheckSheetOpenChange}
+            >
+                <SheetContent className="w-full sm:max-w-md">
+                    <SheetHeader className="border-b border-border/60 pb-4">
+                        <SheetTitle>
+                            {t('articles.editor.spellcheck')}
+                        </SheetTitle>
+                        <SheetDescription>
+                            {t('articles.editor.spellcheck_sheet')}
+                        </SheetDescription>
+                    </SheetHeader>
+                    <div className="overflow-y-auto px-4 pt-4 pb-6">
+                        <SpellCheckPanel
+                            editor={editor}
+                            hasRun={hasRun}
+                            isChecking={isChecking}
+                            focusedMatchId={focusedSpellCheckMatchId}
+                            onFocusMatch={handleFocusSpellCheckMatch}
+                        />
+                    </div>
+                </SheetContent>
+            </Sheet>
+
+            <SpellCheckPopover
+                editor={editor}
+                matchId={spellCheckPopoverMatchId}
+                anchorRect={spellCheckPopoverRect}
+                onClose={closeSpellCheckPopover}
+                onFocusMatch={handleFocusSpellCheckMatch}
+            />
 
             <ArticleImageDialog
                 open={imageDialogOpen}
@@ -956,7 +1128,7 @@ export default function ArticleDocumentEditor({
                             {t('articles.editor.media_sheet')}
                         </SheetDescription>
                     </SheetHeader>
-                    <div className="overflow-y-auto px-4 pb-6 pt-4">
+                    <div className="overflow-y-auto px-4 pt-4 pb-6">
                         <ArticleMediaPanel
                             editor={editor}
                             mediaItems={mediaItems}

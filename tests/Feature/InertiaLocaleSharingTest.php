@@ -48,4 +48,20 @@ class InertiaLocaleSharingTest extends TestCase
                 ->where('translations.nav.articles', 'Artikel')
             );
     }
+
+    public function test_inertia_shares_publication_contributor_translations(): void
+    {
+        $user = User::factory()->create();
+
+        app()->setLocale('de');
+
+        $this->actingAs($user)
+            ->get(route('publications.index'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('translations.publications.view', 'Ansehen')
+                ->where('translations.publications.owned_by', 'Eigentümer: :name')
+                ->where('translations.publications.owner_notice', 'Diese Publikation gehört :name. Du kannst sie nur ansehen.')
+            );
+    }
 }

@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    'languagetool' => [
+        'url' => env('LANGUAGETOOL_URL', 'http://host.docker.internal:8011'),
+        'token' => env('LANGUAGETOOL_API_TOKEN'),
+    ],
+
 ];

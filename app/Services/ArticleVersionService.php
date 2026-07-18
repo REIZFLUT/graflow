@@ -16,6 +16,7 @@ class ArticleVersionService
             'version_number' => $nextVersion,
             'title' => $article->title,
             'content' => $article->content,
+            'status' => $article->status,
             'created_by_id' => $user->id,
             'created_at' => now(),
         ]);

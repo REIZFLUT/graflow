@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Article;
 use App\Models\EditorSettingsSet;
 use App\Models\Publication;
 use Inertia\Inertia;
@@ -12,12 +11,23 @@ class DashboardController extends Controller
 {
     public function __invoke(): Response
     {
+        $user = auth()->user();
+
+        $stats = [
+            'articles' => $user->articles()->count(),
+            'publications' => Publication::query()
+                ->visibleTo($user)
+                ->count(),
+        ];
+
+        if ($user?->canManageEditorSettingsSets()) {
+            $stats['editorSettingsSets'] = EditorSettingsSet::query()
+                ->where('owner_id', $user->id)
+                ->count();
+        }
+
         return Inertia::render('dashboard', [
-            'stats' => [
-                'articles' => Article::count(),
-                'publications' => Publication::count(),
-                'editorSettingsSets' => EditorSettingsSet::count(),
-            ],
+            'stats' => $stats,
         ]);
     }
 }

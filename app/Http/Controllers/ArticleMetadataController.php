@@ -23,7 +23,7 @@ class ArticleMetadataController extends Controller
         ]);
 
         $publications = Publication::query()
-            ->where('owner_id', auth()->id())
+            ->visibleTo(auth()->user())
             ->with([
                 'issues' => fn ($query) => $query->orderByDesc('created_at'),
                 'categories' => fn ($query) => $query->orderBy('name'),
@@ -32,10 +32,12 @@ class ArticleMetadataController extends Controller
             ->orderBy('name')
             ->get();
 
-        $editorSettingsSets = EditorSettingsSet::query()
-            ->where('owner_id', auth()->id())
-            ->orderBy('name')
-            ->get();
+        $editorSettingsSets = auth()->user()->canManageEditorSettingsSets()
+            ? EditorSettingsSet::query()
+                ->where('owner_id', auth()->id())
+                ->orderBy('name')
+                ->get()
+            : collect();
 
         $defaultEditorSettingsSet = $article->publicationIssue?->publication?->editorSettingsSet;
 
@@ -49,10 +51,15 @@ class ArticleMetadataController extends Controller
 
     public function update(UpdateArticleMetadataRequest $request, Article $article): RedirectResponse
     {
-        $article->update([
+        $updateData = [
             'publication_issue_id' => $request->validated('publication_issue_id'),
-            'editor_settings_set_id' => $request->validated('editor_settings_set_id'),
-        ]);
+        ];
+
+        if ($request->user()->canManageEditorSettingsSets()) {
+            $updateData['editor_settings_set_id'] = $request->validated('editor_settings_set_id');
+        }
+
+        $article->update($updateData);
 
         $article->publicationCategories()->sync(
             $request->validated('publication_category_ids') ?? [],

@@ -17,11 +17,18 @@ class PublicationController extends Controller
     {
         $this->authorize('viewAny', Publication::class);
 
+        $user = auth()->user();
+
         $publications = Publication::query()
-            ->where('owner_id', auth()->id())
+            ->visibleTo($user)
+            ->with(['owner:id,name'])
             ->withCount('issues')
             ->latest()
-            ->paginate(15);
+            ->paginate(15)
+            ->through(fn (Publication $publication): Publication => $publication->setAttribute(
+                'can_edit',
+                $publication->owner_id === $user->id,
+            ));
 
         return Inertia::render('publications/index', [
             'publications' => $publications,
@@ -33,7 +40,9 @@ class PublicationController extends Controller
         $this->authorize('create', Publication::class);
 
         return Inertia::render('publications/create', [
-            'editorSettingsSets' => $this->availableEditorSettingsSets(),
+            'editorSettingsSets' => auth()->user()->canManageEditorSettingsSets()
+                ? $this->availableEditorSettingsSets()
+                : collect(),
         ]);
     }
 
@@ -58,15 +67,22 @@ class PublicationController extends Controller
     {
         $this->authorize('view', $publication);
 
+        $canEdit = $publication->owner_id === auth()->id();
+
         $publication->load([
+            'owner:id,name',
             'issues' => fn ($query) => $query->orderByDesc('created_at'),
             'categories' => fn ($query) => $query->orderBy('name'),
             'editorSettingsSet',
         ]);
 
+        $publication->setAttribute('can_edit', $canEdit);
+
         return Inertia::render('publications/edit', [
             'publication' => $publication,
-            'editorSettingsSets' => $this->availableEditorSettingsSets(),
+            'editorSettingsSets' => $canEdit && auth()->user()->canManageEditorSettingsSets()
+                ? $this->availableEditorSettingsSets()
+                : collect(),
         ]);
     }
 

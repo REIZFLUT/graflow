@@ -92,6 +92,9 @@ export default function ArticlesMetadata({
                 >
                     <ArticleMetadataForm
                         publications={publications}
+                        assignedPublicationId={
+                            article.publication_issue?.publication_id ?? null
+                        }
                         publicationIssueId={data.publication_issue_id}
                         onPublicationIssueIdChange={(issueId) =>
                             setData('publication_issue_id', issueId)

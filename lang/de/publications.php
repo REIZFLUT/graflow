@@ -6,10 +6,14 @@ return [
     'new' => 'Neue Publikation',
     'empty' => 'Du hast noch keine Publikationen angelegt.',
     'create_first' => 'Erste Publikation anlegen',
+    'view' => 'Ansehen',
+    'owned_by' => 'Eigentümer: :name',
+    'owner_notice' => 'Diese Publikation gehört :name. Du kannst sie nur ansehen.',
 
     'table' => [
         'name' => 'Name',
         'issues' => 'Ausgaben',
+        'owner' => 'Eigentümer',
     ],
 
     'create' => [
@@ -23,7 +27,9 @@ return [
 
     'edit' => [
         'description' => 'Bearbeite die Publikation, ihre Ausgaben und Kategorien',
+        'readonly_description' => 'Übersicht der Publikation, ihrer Ausgaben und Kategorien',
         'editor_settings_description' => 'Wähle ein Set für Artikel dieser Publikation im Editor.',
+        'no_editor_settings' => 'Kein Editor-Einstellungen-Set zugewiesen.',
         'delete_heading' => 'Publikation löschen',
         'delete_description' => 'Alle Ausgaben und Kategorien werden ebenfalls gelöscht.',
     ],
@@ -31,6 +37,7 @@ return [
     'issues' => [
         'heading' => 'Ausgaben',
         'description' => 'Verwalte die Ausgaben dieser Publikation, z. B. 07-2026.',
+        'readonly_description' => 'Ausgaben dieser Publikation',
         'empty' => 'Noch keine Ausgaben angelegt.',
         'table' => [
             'label' => 'Bezeichnung',
@@ -49,6 +56,7 @@ return [
     'categories' => [
         'heading' => 'Kategorien',
         'description' => 'Lege die Kategorien fest, die Artikeln dieser Publikation zugeordnet werden können.',
+        'readonly_description' => 'Kategorien dieser Publikation',
         'empty' => 'Noch keine Kategorien angelegt.',
         'table' => [
             'name' => 'Name',

@@ -6,6 +6,7 @@ use App\Enums\ArticleStatus;
 use App\Models\Article;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
 class ArticleCrudTest extends TestCase
@@ -125,6 +126,30 @@ class ArticleCrudTest extends TestCase
         $this->actingAs($user)
             ->get(route('articles.edit', $article))
             ->assertOk();
+    }
+
+    public function test_edit_page_includes_version_status(): void
+    {
+        $user = User::factory()->create();
+        $article = Article::factory()->for($user, 'owner')->create([
+            'status' => ArticleStatus::Published,
+        ]);
+        $article->versions()->create([
+            'version_number' => 1,
+            'title' => $article->title,
+            'content' => $article->content,
+            'status' => ArticleStatus::Published,
+            'created_by_id' => $user->id,
+            'created_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('articles.edit', $article))
+            ->assertOk()
+            ->assertInertia(
+                fn (AssertableInertia $page) => $page
+                    ->where('article.versions.0.status', ArticleStatus::Published->value)
+            );
     }
 
     public function test_update_persists_changes(): void

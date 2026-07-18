@@ -55,42 +55,63 @@ export default function PublicationsIndex({ publications }: PageProps) {
                                     <th className="px-4 py-3 text-left font-medium">
                                         {t('publications.table.issues')}
                                     </th>
+                                    <th className="px-4 py-3 text-left font-medium">
+                                        {t('publications.table.owner')}
+                                    </th>
                                     <th className="px-4 py-3 text-right font-medium">
                                         {t('common.action')}
                                     </th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {publications.data.map((publication) => (
-                                    <tr
-                                        key={publication.id}
-                                        className="border-b border-sidebar-border/70 last:border-b-0 dark:border-sidebar-border"
-                                    >
-                                        <td className="px-4 py-3 font-medium">
-                                            {publication.name}
-                                        </td>
-                                        <td className="px-4 py-3 text-muted-foreground">
-                                            {publication.issues_count ?? 0}
-                                        </td>
-                                        <td className="px-4 py-3 text-right">
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                asChild
-                                            >
-                                                <Link
-                                                    href={edit({
-                                                        publication:
-                                                            publication.id,
-                                                    })}
-                                                    prefetch
+                                {publications.data.map((publication) => {
+                                    const canEdit = publication.can_edit !== false;
+
+                                    return (
+                                        <tr
+                                            key={publication.id}
+                                            className="border-b border-sidebar-border/70 last:border-b-0 dark:border-sidebar-border"
+                                        >
+                                            <td className="px-4 py-3 font-medium">
+                                                {publication.name}
+                                            </td>
+                                            <td className="px-4 py-3 text-muted-foreground">
+                                                {publication.issues_count ?? 0}
+                                            </td>
+                                            <td className="px-4 py-3 text-muted-foreground">
+                                                {canEdit
+                                                    ? t('common.em_dash')
+                                                    : t('publications.owned_by', {
+                                                          name:
+                                                              publication.owner
+                                                                  ?.name ??
+                                                              t('common.unknown'),
+                                                      })}
+                                            </td>
+                                            <td className="px-4 py-3 text-right">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    asChild
                                                 >
-                                                    {t('common.edit')}
-                                                </Link>
-                                            </Button>
-                                        </td>
-                                    </tr>
-                                ))}
+                                                    <Link
+                                                        href={edit({
+                                                            publication:
+                                                                publication.id,
+                                                        })}
+                                                        prefetch
+                                                    >
+                                                        {canEdit
+                                                            ? t('common.edit')
+                                                            : t(
+                                                                  'publications.view',
+                                                              )}
+                                                    </Link>
+                                                </Button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>

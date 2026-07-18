@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { FileText, LayoutGrid, Newspaper, SlidersHorizontal } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
@@ -21,6 +21,7 @@ import type { NavItem } from '@/types';
 
 export function AppSidebar() {
     const { t } = useTranslation();
+    const { can } = usePage().props;
 
     const mainNavItems: NavItem[] = [
         {
@@ -38,11 +39,15 @@ export function AppSidebar() {
             href: publicationsIndex(),
             icon: Newspaper,
         },
-        {
-            title: t('nav.editor_settings'),
-            href: editorSettingsSetsIndex(),
-            icon: SlidersHorizontal,
-        },
+        ...(can.manageEditorSettingsSets
+            ? [
+                  {
+                      title: t('nav.editor_settings'),
+                      href: editorSettingsSetsIndex(),
+                      icon: SlidersHorizontal,
+                  },
+              ]
+            : []),
     ];
 
     return (

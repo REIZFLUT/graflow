@@ -12,7 +12,7 @@ import { dashboard } from '@/routes';
 type DashboardStats = {
     articles: number;
     publications: number;
-    editorSettingsSets: number;
+    editorSettingsSets?: number;
 };
 
 type DashboardPageProps = {
@@ -21,7 +21,7 @@ type DashboardPageProps = {
 
 export default function Dashboard() {
     const { t } = useTranslation();
-    const { auth, stats } = usePage<DashboardPageProps>().props;
+    const { auth, stats, can } = usePage<DashboardPageProps>().props;
 
     setLayoutProps({
         breadcrumbs: [
@@ -45,12 +45,18 @@ export default function Dashboard() {
             value: stats.publications,
             description: t('dashboard.stats.publications.description'),
         },
-        {
-            key: 'editor_settings',
-            label: t('dashboard.stats.editor_settings.label'),
-            value: stats.editorSettingsSets,
-            description: t('dashboard.stats.editor_settings.description'),
-        },
+        ...(can.manageEditorSettingsSets && stats.editorSettingsSets !== undefined
+            ? [
+                  {
+                      key: 'editor_settings',
+                      label: t('dashboard.stats.editor_settings.label'),
+                      value: stats.editorSettingsSets,
+                      description: t(
+                          'dashboard.stats.editor_settings.description',
+                      ),
+                  },
+              ]
+            : []),
     ];
 
     return (

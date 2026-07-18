@@ -1,4 +1,4 @@
-import { Form, Head, Link } from '@inertiajs/react';
+import { Form, Head, Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import PublicationController from '@/actions/App/Http/Controllers/PublicationController';
 import Heading from '@/components/heading';
@@ -29,6 +29,8 @@ export default function PublicationsCreate({
     editorSettingsSets,
 }: PageProps) {
     const { t } = useTranslation();
+    const { can } = usePage().props;
+    const canManageEditorSettingsSets = can.manageEditorSettingsSets;
     const [editorSettingsSetId, setEditorSettingsSetId] = useState(
         editorSettingsSets[0] ? String(editorSettingsSets[0].id) : '',
     );
@@ -62,99 +64,104 @@ export default function PublicationsCreate({
                                 <InputError message={errors.name} />
                             </div>
 
-                            <div className="space-y-4">
-                                <div>
-                                    <p className="font-medium">
-                                        {t(
-                                            'publications.create.editor_settings_heading',
-                                        )}
-                                    </p>
-                                    <p className="text-sm text-muted-foreground">
-                                        {t(
-                                            'publications.create.editor_settings_description',
-                                        )}
-                                    </p>
-                                </div>
-
-                                <input
-                                    type="hidden"
-                                    name="editor_settings_set_id"
-                                    value={editorSettingsSetId}
-                                />
-
-                                {editorSettingsSets.length > 0 ? (
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="editor_settings_set_id">
-                                            {t('common.set')}
-                                        </Label>
-                                        <Select
-                                            value={editorSettingsSetId}
-                                            onValueChange={setEditorSettingsSetId}
-                                        >
-                                            <SelectTrigger id="editor_settings_set_id">
-                                                <SelectValue
-                                                    placeholder={t(
-                                                        'common.select_set',
-                                                    )}
-                                                />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {editorSettingsSets.map(
-                                                    (set) => (
-                                                        <SelectItem
-                                                            key={set.id}
-                                                            value={String(
-                                                                set.id,
-                                                            )}
-                                                        >
-                                                            {set.name} (
-                                                            {formatEditorSettingsSetSummary(
-                                                                set,
-                                                                t,
-                                                            )}
-                                                            )
-                                                        </SelectItem>
-                                                    ),
-                                                )}
-                                            </SelectContent>
-                                        </Select>
-                                        <InputError
-                                            message={
-                                                errors.editor_settings_set_id
-                                            }
-                                        />
-                                    </div>
-                                ) : (
-                                    <div className="rounded-lg border border-dashed border-sidebar-border/70 p-4 text-sm text-muted-foreground dark:border-sidebar-border">
-                                        <p>
+                            {canManageEditorSettingsSets && (
+                                <div className="space-y-4">
+                                    <div>
+                                        <p className="font-medium">
                                             {t(
-                                                'publications.create.no_sets_hint',
+                                                'publications.create.editor_settings_heading',
                                             )}
                                         </p>
-                                        <Button
-                                            asChild
-                                            variant="outline"
-                                            size="sm"
-                                            className="mt-3"
-                                        >
-                                            <Link
-                                                href={createEditorSettingsSet()}
-                                                prefetch
-                                            >
-                                                {t('common.create_set')}
-                                            </Link>
-                                        </Button>
+                                        <p className="text-sm text-muted-foreground">
+                                            {t(
+                                                'publications.create.editor_settings_description',
+                                            )}
+                                        </p>
                                     </div>
-                                )}
-                            </div>
+
+                                    <input
+                                        type="hidden"
+                                        name="editor_settings_set_id"
+                                        value={editorSettingsSetId}
+                                    />
+
+                                    {editorSettingsSets.length > 0 ? (
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="editor_settings_set_id">
+                                                {t('common.set')}
+                                            </Label>
+                                            <Select
+                                                value={editorSettingsSetId}
+                                                onValueChange={
+                                                    setEditorSettingsSetId
+                                                }
+                                            >
+                                                <SelectTrigger id="editor_settings_set_id">
+                                                    <SelectValue
+                                                        placeholder={t(
+                                                            'common.select_set',
+                                                        )}
+                                                    />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {editorSettingsSets.map(
+                                                        (set) => (
+                                                            <SelectItem
+                                                                key={set.id}
+                                                                value={String(
+                                                                    set.id,
+                                                                )}
+                                                            >
+                                                                {set.name} (
+                                                                {formatEditorSettingsSetSummary(
+                                                                    set,
+                                                                    t,
+                                                                )}
+                                                                )
+                                                            </SelectItem>
+                                                        ),
+                                                    )}
+                                                </SelectContent>
+                                            </Select>
+                                            <InputError
+                                                message={
+                                                    errors.editor_settings_set_id
+                                                }
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div className="rounded-lg border border-dashed border-sidebar-border/70 p-4 text-sm text-muted-foreground dark:border-sidebar-border">
+                                            <p>
+                                                {t(
+                                                    'publications.create.no_sets_hint',
+                                                )}
+                                            </p>
+                                            <Button
+                                                asChild
+                                                variant="outline"
+                                                size="sm"
+                                                className="mt-3"
+                                            >
+                                                <Link
+                                                    href={createEditorSettingsSet()}
+                                                    prefetch
+                                                >
+                                                    {t('common.create_set')}
+                                                </Link>
+                                            </Button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                             <div className="flex flex-wrap gap-3">
                                 <Button
                                     type="submit"
                                     disabled={
                                         processing ||
-                                        editorSettingsSets.length === 0 ||
-                                        editorSettingsSetId === ''
+                                        (canManageEditorSettingsSets &&
+                                            (editorSettingsSets.length === 0 ||
+                                                editorSettingsSetId === ''))
                                     }
                                 >
                                     {processing && (

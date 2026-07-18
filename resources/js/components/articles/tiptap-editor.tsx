@@ -1,9 +1,10 @@
+import { NodeSelection } from '@tiptap/pm/state';
 import {
     EditorContent,
     useEditor,
     useEditorState,
-    type Editor,
 } from '@tiptap/react';
+import type { Editor } from '@tiptap/react';
 import {
     Bold,
     CaseSensitive,
@@ -18,19 +19,19 @@ import {
     Pilcrow,
     Quote,
     Sigma,
+    SpellCheck2,
     SquareAsterisk,
     SquareFunction,
     Subscript,
     Superscript,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef } from 'react';
-import { NodeSelection } from '@tiptap/pm/state';
-import { SquareArrowRightExitIcon } from '@/components/icons/square-arrow-right-exit-icon';
 import { focusMarginalNoteForSelection } from '@/components/articles/marginal-notes-column';
 import { SpecialFormatToolbarMenu } from '@/components/articles/special-format-toolbar-menu';
 import { TableToolbarMenu } from '@/components/articles/table-toolbar-menu';
+import { SquareArrowRightExitIcon } from '@/components/icons/square-arrow-right-exit-icon';
+import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/hooks/use-translation';
-import { cn } from '@/lib/utils';
 import {
     createBlockElements,
     createCharacterFormats,
@@ -43,6 +44,7 @@ import {
     getTopLevelBlockAtSelection,
     selectArticleImageFigure,
 } from '@/lib/tiptap';
+import { cn } from '@/lib/utils';
 import type { TipTapDocument } from '@/types';
 
 type TipTapEditorProps = {
@@ -52,6 +54,7 @@ type TipTapEditorProps = {
     variant?: 'default' | 'document';
     onEditorReady?: (editor: Editor) => void;
     onFootnoteMarkClick?: (footnoteId: string) => void;
+    onSpellCheckMarkClick?: (matchId: string, rect: DOMRect) => void;
     onArticleImageSelect?: (mediaId: string) => void;
     onArticleImageDoubleClick?: (mediaId: string) => void;
     onInlineMathClick?: (latex: string, pos: number) => void;
@@ -101,6 +104,8 @@ export function TipTapToolbar({
     onRemoveArticleImage,
     onInlineMathClick,
     onBlockMathClick,
+    onSpellCheckClick,
+    isSpellChecking = false,
 }: {
     editor: Editor;
     showMarginalNotes?: boolean;
@@ -109,6 +114,8 @@ export function TipTapToolbar({
     onRemoveArticleImage?: () => void;
     onInlineMathClick?: () => void;
     onBlockMathClick?: () => void;
+    onSpellCheckClick?: () => void;
+    isSpellChecking?: boolean;
 }) {
     const { t } = useTranslation();
     const normalParagraphFormat = useMemo(
@@ -410,6 +417,23 @@ export function TipTapToolbar({
             >
                 <ImageMinus className="size-4 stroke-[1.75]" />
             </ToolbarButton>
+
+            <div
+                className="mx-1.5 h-5 w-px shrink-0 bg-border/60"
+                aria-hidden
+            />
+
+            <ToolbarButton
+                label={t('editor.toolbar.spellcheck')}
+                disabled={isSpellChecking || !onSpellCheckClick}
+                onClick={() => onSpellCheckClick?.()}
+            >
+                {isSpellChecking ? (
+                    <Spinner className="size-4" />
+                ) : (
+                    <SpellCheck2 className="size-4 stroke-[1.75]" />
+                )}
+            </ToolbarButton>
         </div>
     );
 }
@@ -421,6 +445,7 @@ export default function TipTapEditor({
     variant = 'default',
     onEditorReady,
     onFootnoteMarkClick,
+    onSpellCheckMarkClick,
     onArticleImageSelect,
     onArticleImageDoubleClick,
     onInlineMathClick,
@@ -429,6 +454,7 @@ export default function TipTapEditor({
     const { t } = useTranslation();
     const isDocument = variant === 'document';
     const onFootnoteMarkClickRef = useRef(onFootnoteMarkClick);
+    const onSpellCheckMarkClickRef = useRef(onSpellCheckMarkClick);
     const onArticleImageSelectRef = useRef(onArticleImageSelect);
     const onArticleImageDoubleClickRef = useRef(onArticleImageDoubleClick);
     const onInlineMathClickRef = useRef(onInlineMathClick);
@@ -437,33 +463,44 @@ export default function TipTapEditor({
         JSON.stringify(content),
     );
 
-    onFootnoteMarkClickRef.current = onFootnoteMarkClick;
-    onArticleImageSelectRef.current = onArticleImageSelect;
-    onArticleImageDoubleClickRef.current = onArticleImageDoubleClick;
-    onInlineMathClickRef.current = onInlineMathClick;
-    onBlockMathClickRef.current = onBlockMathClick;
+    useEffect(() => {
+        onFootnoteMarkClickRef.current = onFootnoteMarkClick;
+        onSpellCheckMarkClickRef.current = onSpellCheckMarkClick;
+        onArticleImageSelectRef.current = onArticleImageSelect;
+        onArticleImageDoubleClickRef.current = onArticleImageDoubleClick;
+        onInlineMathClickRef.current = onInlineMathClick;
+        onBlockMathClickRef.current = onBlockMathClick;
+    }, [
+        onArticleImageDoubleClick,
+        onArticleImageSelect,
+        onBlockMathClick,
+        onFootnoteMarkClick,
+        onInlineMathClick,
+        onSpellCheckMarkClick,
+    ]);
 
-    const extensions = useMemo(
-        () =>
-            createArticleEditorExtensions({
-                placeholder: isDocument
-                    ? t('editor.placeholder.document')
-                    : t('editor.placeholder.default'),
-                onInlineMathClick: (node, pos) => {
-                    onInlineMathClickRef.current?.(
-                        node.attrs.latex as string,
-                        pos,
-                    );
-                },
-                onBlockMathClick: (node, pos) => {
-                    onBlockMathClickRef.current?.(
-                        node.attrs.latex as string,
-                        pos,
-                    );
-                },
-            }),
-        [isDocument, t],
-    );
+    // Extensions close over refs so math click handlers stay stable without remounting the editor.
+    const extensions = useMemo(() => {
+        /* eslint-disable react-hooks/refs -- intentional stable callback refs for TipTap extensions */
+        return createArticleEditorExtensions({
+            placeholder: isDocument
+                ? t('editor.placeholder.document')
+                : t('editor.placeholder.default'),
+            onInlineMathClick: (node, pos) => {
+                onInlineMathClickRef.current?.(
+                    node.attrs.latex as string,
+                    pos,
+                );
+            },
+            onBlockMathClick: (node, pos) => {
+                onBlockMathClickRef.current?.(
+                    node.attrs.latex as string,
+                    pos,
+                );
+            },
+        });
+        /* eslint-enable react-hooks/refs */
+    }, [isDocument, t]);
 
     const editor = useEditor({
         extensions,
@@ -478,6 +515,25 @@ export default function TipTapEditor({
                 ),
             },
             handleClick: (_view, _pos, event) => {
+                const spellcheckElement = (
+                    event.target as HTMLElement
+                ).closest('.spellcheck-error');
+
+                if (spellcheckElement) {
+                    const matchId =
+                        spellcheckElement.getAttribute('data-spellcheck-id');
+
+                    if (matchId) {
+                        event.preventDefault();
+                        onSpellCheckMarkClickRef.current?.(
+                            matchId,
+                            spellcheckElement.getBoundingClientRect(),
+                        );
+
+                        return true;
+                    }
+                }
+
                 const markElement = (event.target as HTMLElement).closest(
                     '.article-footnote-mark',
                 );

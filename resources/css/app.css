@@ -171,6 +171,41 @@
         outline: none;
     }
 
+    .version-diff-highlight {
+        background-color: rgb(254 240 138 / 0.9);
+        border-radius: 0.125rem;
+        transition: background-color 0.3s ease;
+    }
+
+    .article-document-body .tiptap .version-diff-highlight {
+        background-color: rgb(254 240 138 / 0.9);
+    }
+
+    .dark .version-diff-highlight,
+    .dark .article-document-body .tiptap .version-diff-highlight {
+        background-color: rgb(250 204 21 / 0.35);
+    }
+
+    .article-document-body .tiptap .spellcheck-error {
+        text-decoration-line: underline;
+        text-decoration-style: wavy;
+        text-decoration-thickness: from-font;
+        text-underline-offset: 0.18em;
+        cursor: pointer;
+    }
+
+    .article-document-body .tiptap .spellcheck-typos {
+        text-decoration-color: color-mix(in oklab, oklch(0.55 0.2 25) 85%, transparent);
+    }
+
+    .article-document-body .tiptap .spellcheck-grammar {
+        text-decoration-color: color-mix(in oklab, oklch(0.52 0.16 255) 85%, transparent);
+    }
+
+    .article-document-body .tiptap .spellcheck-style {
+        text-decoration-color: color-mix(in oklab, oklch(0.62 0.16 55) 85%, transparent);
+    }
+
     .article-document-body .article-prose,
     .article-document-body .article-prose :is(h2, h3) {
         scroll-margin-top: 1.5rem;
