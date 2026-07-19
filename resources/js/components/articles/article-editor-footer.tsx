@@ -1,4 +1,4 @@
-import { GitBranch, History } from 'lucide-react';
+import { GitBranch, History, Image, SquareAsterisk } from 'lucide-react';
 import DocumentStatusBar from '@/components/articles/document-status-bar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,10 @@ type ArticleEditorFooterProps = DocumentStats & {
     submissionDeadline?: string | null;
     targetCharacterCount?: number | null;
     versionsCount?: number;
+    footnoteCount?: number;
+    mediaCount?: number;
+    onFootnotesClick?: () => void;
+    onMediaClick?: () => void;
     onHistoryClick?: () => void;
     onVersionsClick?: () => void;
 };
@@ -24,6 +28,10 @@ export default function ArticleEditorFooter({
     submissionDeadline = null,
     targetCharacterCount = null,
     versionsCount = 0,
+    footnoteCount = 0,
+    mediaCount = 0,
+    onFootnotesClick,
+    onMediaClick,
     onHistoryClick,
     onVersionsClick,
 }: ArticleEditorFooterProps) {
@@ -32,6 +40,42 @@ export default function ArticleEditorFooter({
     return (
         <div className="flex w-full items-center justify-between gap-4">
             <div className="flex shrink-0 items-center gap-1">
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    onClick={onFootnotesClick}
+                >
+                    <SquareAsterisk className="size-3.5" />
+                    {t('articles.editor.footnotes')}
+                    {footnoteCount > 0 && (
+                        <Badge
+                            variant="secondary"
+                            className="ml-1 h-5 min-w-5 px-1"
+                        >
+                            {footnoteCount}
+                        </Badge>
+                    )}
+                </Button>
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    onClick={onMediaClick}
+                >
+                    <Image className="size-3.5" />
+                    {t('articles.editor.media')}
+                    {mediaCount > 0 && (
+                        <Badge
+                            variant="secondary"
+                            className="ml-1 h-5 min-w-5 px-1"
+                        >
+                            {mediaCount}
+                        </Badge>
+                    )}
+                </Button>
                 {articleId !== undefined && (
                     <>
                         <Button

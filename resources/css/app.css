@@ -192,6 +192,16 @@
         text-decoration-thickness: from-font;
         text-underline-offset: 0.18em;
         cursor: pointer;
+        border-radius: 0.125rem;
+        transition: background-color 0.3s ease;
+    }
+
+    .article-document-body .tiptap .spellcheck-error-highlight {
+        background-color: rgb(254 202 202 / 0.75);
+    }
+
+    .dark .article-document-body .tiptap .spellcheck-error-highlight {
+        background-color: rgb(127 29 29 / 0.45);
     }
 
     .article-document-body .tiptap .spellcheck-typos {

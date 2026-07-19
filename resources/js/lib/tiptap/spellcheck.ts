@@ -11,12 +11,15 @@ export type { MappedSpellCheckMatch } from '@/lib/tiptap/spellcheck-utils';
 type SpellCheckPluginState = {
     decorations: DecorationSet;
     matches: MappedSpellCheckMatch[];
+    highlightedMatchId: string | null;
 };
 
 type SpellCheckMeta =
     | { type: 'setMatches'; matches: MappedSpellCheckMatch[] }
     | { type: 'clear' }
-    | { type: 'dismiss'; id: string };
+    | { type: 'dismiss'; id: string }
+    | { type: 'highlight'; id: string }
+    | { type: 'clearHighlight' };
 
 declare module '@tiptap/core' {
     interface Commands<ReturnType> {
@@ -30,6 +33,8 @@ declare module '@tiptap/core' {
                 value: string,
             ) => ReturnType;
             dismissSpellCheckMatch: (id: string) => ReturnType;
+            highlightSpellCheckMatch: (id: string) => ReturnType;
+            clearSpellCheckHighlight: () => ReturnType;
         };
     }
 }
@@ -41,23 +46,32 @@ export const spellCheckPluginKey = new PluginKey<SpellCheckPluginState>(
 function createDecorations(
     doc: ProseMirrorNode,
     matches: MappedSpellCheckMatch[],
+    highlightedMatchId: string | null = null,
 ): DecorationSet {
     return DecorationSet.create(
         doc,
-        matches.map((match) =>
-            Decoration.inline(
+        matches.map((match) => {
+            const classes = [
+                'spellcheck-error',
+                `spellcheck-${match.categoryClass}`,
+                ...(highlightedMatchId === match.id
+                    ? ['spellcheck-error-highlight']
+                    : []),
+            ].join(' ');
+
+            return Decoration.inline(
                 match.from,
                 match.to,
                 {
-                    class: `spellcheck-error spellcheck-${match.categoryClass}`,
+                    class: classes,
                     'data-spellcheck-id': match.id,
                 },
                 {
                     id: match.id,
                     match,
                 },
-            ),
-        ),
+            );
+        }),
     );
 }
 
@@ -79,6 +93,7 @@ function emptyState(): SpellCheckPluginState {
     return {
         decorations: DecorationSet.empty,
         matches: [],
+        highlightedMatchId: null,
     };
 }
 
@@ -90,6 +105,7 @@ function applyMeta(
     if (meta.type === 'setMatches') {
         return {
             matches: meta.matches,
+            highlightedMatchId: null,
             decorations: createDecorations(doc, meta.matches),
         };
     }
@@ -98,11 +114,30 @@ function applyMeta(
         return emptyState();
     }
 
+    if (meta.type === 'highlight') {
+        return {
+            ...value,
+            highlightedMatchId: meta.id,
+            decorations: createDecorations(doc, value.matches, meta.id),
+        };
+    }
+
+    if (meta.type === 'clearHighlight') {
+        return {
+            ...value,
+            highlightedMatchId: null,
+            decorations: createDecorations(doc, value.matches),
+        };
+    }
+
     const matches = value.matches.filter((match) => match.id !== meta.id);
+    const highlightedMatchId =
+        value.highlightedMatchId === meta.id ? null : value.highlightedMatchId;
 
     return {
         matches,
-        decorations: createDecorations(doc, matches),
+        highlightedMatchId,
+        decorations: createDecorations(doc, matches, highlightedMatchId),
     };
 }
 
@@ -135,11 +170,28 @@ export function focusSpellCheckMatch(
         .setTextSelection({ from: match.from, to: match.to })
         .run();
 
+    highlightSpellCheckMatch(editor, match.id);
+
     const dom = editor.view.dom.querySelector<HTMLElement>(
         `[data-spellcheck-id="${CSS.escape(match.id)}"]`,
     );
 
     dom?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+let highlightTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
+export function highlightSpellCheckMatch(editor: Editor, matchId: string): void {
+    editor.commands.highlightSpellCheckMatch(matchId);
+
+    if (highlightTimeoutId !== null) {
+        clearTimeout(highlightTimeoutId);
+    }
+
+    highlightTimeoutId = setTimeout(() => {
+        editor.commands.clearSpellCheckHighlight();
+        highlightTimeoutId = null;
+    }, 3000);
 }
 
 export const SpellCheck = Extension.create({
@@ -207,6 +259,39 @@ export const SpellCheck = Extension.create({
 
                     return true;
                 },
+            highlightSpellCheckMatch:
+                (id) =>
+                ({ editor, tr, dispatch }) => {
+                    const match = getPluginState(editor.state).matches.find(
+                        (entry) => entry.id === id,
+                    );
+
+                    if (!match) {
+                        return false;
+                    }
+
+                    if (dispatch) {
+                        tr.setMeta(spellCheckPluginKey, {
+                            type: 'highlight',
+                            id,
+                        } satisfies SpellCheckMeta);
+                        dispatch(tr);
+                    }
+
+                    return true;
+                },
+            clearSpellCheckHighlight:
+                () =>
+                ({ tr, dispatch }) => {
+                    if (dispatch) {
+                        tr.setMeta(spellCheckPluginKey, {
+                            type: 'clearHighlight',
+                        } satisfies SpellCheckMeta);
+                        dispatch(tr);
+                    }
+
+                    return true;
+                },
         };
     },
 
@@ -233,12 +318,18 @@ export const SpellCheck = Extension.create({
                                 const mappedMatches = matchesFromDecorations(
                                     mappedDecorations,
                                 ).filter((match) => match.id !== meta.id);
+                                const highlightedMatchId =
+                                    value.highlightedMatchId === meta.id
+                                        ? null
+                                        : value.highlightedMatchId;
 
                                 return {
                                     matches: mappedMatches,
+                                    highlightedMatchId,
                                     decorations: createDecorations(
                                         tr.doc,
                                         mappedMatches,
+                                        highlightedMatchId,
                                     ),
                                 };
                             }
@@ -254,10 +345,20 @@ export const SpellCheck = Extension.create({
                             tr.mapping,
                             tr.doc,
                         );
+                        const matches = matchesFromDecorations(decorations);
+                        const highlightedMatchId =
+                            value.highlightedMatchId &&
+                            matches.some(
+                                (match) =>
+                                    match.id === value.highlightedMatchId,
+                            )
+                                ? value.highlightedMatchId
+                                : null;
 
                         return {
                             decorations,
-                            matches: matchesFromDecorations(decorations),
+                            matches,
+                            highlightedMatchId,
                         };
                     },
                 },

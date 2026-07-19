@@ -3,17 +3,16 @@ import type { Editor } from '@tiptap/react';
 import {
     ArrowLeft,
     FileText,
-    Image,
     Save,
-    SquareAsterisk,
     Tags,
 } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { toast } from 'sonner';
 import ArticleEditorFooter from '@/components/articles/article-editor-footer';
 import ArticleImageDialog from '@/components/articles/article-image-dialog';
 import ArticleMediaPanel from '@/components/articles/article-media-panel';
+import EditorSidePanel from '@/components/articles/editor-side-panel';
 import FootnoteDialog from '@/components/articles/footnote-dialog';
 import FootnotesPanel from '@/components/articles/footnotes-panel';
 import MarginalNotesColumn from '@/components/articles/marginal-notes-column';
@@ -33,13 +32,6 @@ import WorkflowHistoryPanel from '@/components/articles/workflow-history-panel';
 import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-    Sheet,
-    SheetContent,
-    SheetDescription,
-    SheetHeader,
-    SheetTitle,
-} from '@/components/ui/sheet';
 import { Spinner } from '@/components/ui/spinner';
 import { useArticleEditorChrome } from '@/contexts/article-editor-chrome-context';
 import type { ArticleMediaFormData } from '@/hooks/use-article-media';
@@ -111,6 +103,13 @@ type ArticleDocumentEditorProps = {
     onMediaDelete?: (media: ArticleMedia) => Promise<void>;
 };
 
+type EditorRightPanel =
+    | 'spellcheck'
+    | 'history'
+    | 'versions'
+    | 'footnotes'
+    | 'media';
+
 export default function ArticleDocumentEditor({
     title,
     content,
@@ -147,11 +146,9 @@ export default function ArticleDocumentEditor({
         'create',
     );
     const [footnoteCount, setFootnoteCount] = useState(0);
-    const [footnotesSheetOpen, setFootnotesSheetOpen] = useState(false);
     const [focusedFootnoteId, setFocusedFootnoteId] = useState<string | null>(
         null,
     );
-    const [spellCheckSheetOpen, setSpellCheckSheetOpen] = useState(false);
     const [focusedSpellCheckMatchId, setFocusedSpellCheckMatchId] = useState<
         string | null
     >(null);
@@ -172,7 +169,6 @@ export default function ArticleDocumentEditor({
         'upload',
     );
     const [editingMedia, setEditingMedia] = useState<ArticleMedia | null>(null);
-    const [mediaSheetOpen, setMediaSheetOpen] = useState(false);
     const [mathDialogOpen, setMathDialogOpen] = useState(false);
     const [mathLatex, setMathLatex] = useState('');
     const [mathVariant, setMathVariant] = useState<MathDialogVariant>('inline');
@@ -182,15 +178,19 @@ export default function ArticleDocumentEditor({
     const [versionView, setVersionView] = useState<'history' | 'compare'>(
         'history',
     );
-    const [versionSheetOpen, setVersionSheetOpen] = useState(false);
-    const [workflowHistorySheetOpen, setWorkflowHistorySheetOpen] =
-        useState(false);
+    const [activeRightPanel, setActiveRightPanel] =
+        useState<EditorRightPanel | null>(null);
     const [compareBaseId, setCompareBaseId] = useState<number | null>(
         () => versions[1]?.id ?? null,
     );
     const [compareTargetId, setCompareTargetId] = useState<number | null>(
         () => versions[0]?.id ?? null,
     );
+    const activeRightPanelRef = useRef<EditorRightPanel | null>(null);
+
+    useEffect(() => {
+        activeRightPanelRef.current = activeRightPanel;
+    }, [activeRightPanel]);
 
     const openMathDialogForCreate = useCallback(
         (variant: MathDialogVariant) => {
@@ -403,6 +403,44 @@ export default function ArticleDocumentEditor({
         setFootnoteCount(getFootnotesFromEditor(editor).length);
     }, [editor]);
 
+    const clearRightPanelFocus = useCallback((panel: EditorRightPanel) => {
+        if (panel === 'spellcheck') {
+            setFocusedSpellCheckMatchId(null);
+        }
+
+        if (panel === 'footnotes') {
+            setFocusedFootnoteId(null);
+        }
+    }, []);
+
+    const openRightPanel = useCallback((panel: EditorRightPanel) => {
+        setActiveRightPanel(panel);
+
+        if (panel !== 'spellcheck') {
+            setFocusedSpellCheckMatchId(null);
+        }
+
+        if (panel !== 'footnotes') {
+            setFocusedFootnoteId(null);
+        }
+    }, []);
+
+    const toggleRightPanel = useCallback(
+        (panel: EditorRightPanel) => {
+            const isOpen = activeRightPanelRef.current === panel;
+
+            if (isOpen) {
+                setActiveRightPanel(null);
+                clearRightPanelFocus(panel);
+
+                return;
+            }
+
+            openRightPanel(panel);
+        },
+        [clearRightPanelFocus, openRightPanel],
+    );
+
     const openFootnotesSheet = useCallback(
         (footnoteId?: string) => {
             if (footnoteId && editor) {
@@ -413,22 +451,33 @@ export default function ArticleDocumentEditor({
                 }
 
                 setFocusedFootnoteId(footnoteId);
-            } else {
-                setFocusedFootnoteId(null);
+                openRightPanel('footnotes');
+
+                return;
             }
 
-            setFootnotesSheetOpen(true);
+            setFocusedFootnoteId(null);
+            toggleRightPanel('footnotes');
         },
-        [editor],
+        [editor, openRightPanel, toggleRightPanel],
     );
 
-    const handleFootnotesSheetOpenChange = (open: boolean) => {
-        setFootnotesSheetOpen(open);
+    const handleRightPanelOpenChange = useCallback(
+        (panel: EditorRightPanel, open: boolean) => {
+            if (open) {
+                openRightPanel(panel);
 
-        if (!open) {
-            setFocusedFootnoteId(null);
-        }
-    };
+                return;
+            }
+
+            setActiveRightPanel((current) =>
+                current === panel ? null : current,
+            );
+
+            clearRightPanelFocus(panel);
+        },
+        [clearRightPanelFocus, openRightPanel],
+    );
 
     const closeSpellCheckPopover = useCallback(() => {
         setSpellCheckPopoverMatchId(null);
@@ -450,12 +499,12 @@ export default function ArticleDocumentEditor({
         }
 
         closeSpellCheckPopover();
-        setSpellCheckSheetOpen(true);
+        openRightPanel('spellcheck');
 
         if (!hasRun) {
             await runCheck(editor);
         }
-    }, [closeSpellCheckPopover, editor, hasRun, isChecking, runCheck]);
+    }, [closeSpellCheckPopover, editor, hasRun, isChecking, openRightPanel, runCheck]);
 
     const handleStartSpellCheck = useCallback(async () => {
         if (!editor || isChecking) {
@@ -464,14 +513,6 @@ export default function ArticleDocumentEditor({
 
         await runCheck(editor);
     }, [editor, isChecking, runCheck]);
-
-    const handleSpellCheckSheetOpenChange = (open: boolean) => {
-        setSpellCheckSheetOpen(open);
-
-        if (!open) {
-            setFocusedSpellCheckMatchId(null);
-        }
-    };
 
     const handleFocusSpellCheckMatch = useCallback(
         (match: MappedSpellCheckMatch) => {
@@ -621,42 +662,6 @@ export default function ArticleDocumentEditor({
 
                     {workflowActions}
 
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        type="button"
-                        onClick={() => openFootnotesSheet()}
-                    >
-                        <SquareAsterisk className="size-4" />
-                        {t('articles.editor.footnotes')}
-                        {footnoteCount > 0 && (
-                            <Badge
-                                variant="secondary"
-                                className="ml-1 h-5 min-w-5 px-1"
-                            >
-                                {footnoteCount}
-                            </Badge>
-                        )}
-                    </Button>
-
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        type="button"
-                        onClick={() => setMediaSheetOpen(true)}
-                    >
-                        <Image className="size-4" />
-                        {t('articles.editor.media')}
-                        {mediaItems.length > 0 && (
-                            <Badge
-                                variant="secondary"
-                                className="ml-1 h-5 min-w-5 px-1"
-                            >
-                                {mediaItems.length}
-                            </Badge>
-                        )}
-                    </Button>
-
                     {articleId !== undefined && !readOnly && (
                         <Button
                             variant="ghost"
@@ -765,10 +770,6 @@ export default function ArticleDocumentEditor({
     }, [
         articleId,
         editor,
-        footnoteCount,
-        mediaItems.length,
-        openFootnoteDialog,
-        openFootnotesSheet,
         pdfExporting,
         processing,
         setChrome,
@@ -806,10 +807,12 @@ export default function ArticleDocumentEditor({
                         submissionDeadline={submissionDeadline}
                         targetCharacterCount={targetCharacterCount}
                         versionsCount={versions.length}
-                        onHistoryClick={() =>
-                            setWorkflowHistorySheetOpen(true)
-                        }
-                        onVersionsClick={() => setVersionSheetOpen(true)}
+                        footnoteCount={footnoteCount}
+                        mediaCount={mediaItems.length}
+                        onFootnotesClick={() => openFootnotesSheet()}
+                        onMediaClick={() => toggleRightPanel('media')}
+                        onHistoryClick={() => toggleRightPanel('history')}
+                        onVersionsClick={() => toggleRightPanel('versions')}
                     />
                 ),
             });
@@ -831,6 +834,11 @@ export default function ArticleDocumentEditor({
         targetCharacterCount,
         title,
         versions.length,
+        footnoteCount,
+        mediaItems.length,
+        openFootnotesSheet,
+        openRightPanel,
+        toggleRightPanel,
     ]);
 
     useEffect(() => {
@@ -908,12 +916,13 @@ export default function ArticleDocumentEditor({
 
     return (
         <>
-            <form
-                id="article-document-form"
-                onSubmit={handleSubmit}
-                className="flex min-h-full flex-col"
-            >
-                <div className="min-h-full flex-1 bg-muted/30 px-6 py-8 md:px-4 md:py-8">
+            <div className="flex min-h-full flex-col items-stretch sm:h-[calc(100dvh-11rem)] sm:min-h-0 sm:flex-row sm:overflow-hidden">
+                <form
+                    id="article-document-form"
+                    onSubmit={handleSubmit}
+                    className="flex min-h-full min-w-0 flex-1 flex-col sm:overflow-y-auto"
+                >
+                    <div className="min-h-full flex-1 bg-muted/30 px-6 py-8 md:px-4 md:py-8">
                     <article
                         className={cn(
                             'document-page mx-auto max-w-5xl rounded-sm bg-card px-8 py-12 shadow-md ring-1 ring-border/40 md:px-14 md:py-16',
@@ -993,53 +1002,18 @@ export default function ArticleDocumentEditor({
                         </div>
                         <InputError className="mt-4" message={errors.content} />
                     </article>
-                </div>
-            </form>
+                    </div>
+                </form>
 
-            {!readOnly && (
-                <>
-                    <FootnoteDialog
-                        open={footnoteDialogOpen}
-                        onOpenChange={handleFootnoteDialogOpenChange}
-                        value={footnoteText}
-                        onChange={setFootnoteText}
-                        onSave={saveFootnote}
-                        onRemove={
-                            footnoteMode === 'edit'
-                                ? removeEditingFootnote
-                                : undefined
-                        }
-                        excerpt={footnoteExcerpt}
-                        mode={footnoteMode}
-                    />
-
-                    <MathDialog
-                        open={mathDialogOpen}
-                        onOpenChange={handleMathDialogOpenChange}
-                        value={mathLatex}
-                        onChange={setMathLatex}
-                        onSave={saveMath}
-                        onRemove={mathMode === 'edit' ? removeMath : undefined}
-                        variant={mathVariant}
-                        mode={mathMode}
-                    />
-                </>
-            )}
-
-            <Sheet
-                open={footnotesSheetOpen}
-                onOpenChange={handleFootnotesSheetOpenChange}
-            >
-                <SheetContent className="w-full sm:max-w-md">
-                    <SheetHeader className="border-b border-border/60 pb-4">
-                        <SheetTitle>
-                            {t('articles.editor.footnotes')}
-                        </SheetTitle>
-                        <SheetDescription>
-                            {t('articles.editor.footnotes_sheet')}
-                        </SheetDescription>
-                    </SheetHeader>
-                    <div className="overflow-y-auto px-4 pt-4 pb-6">
+                <EditorSidePanel
+                    open={activeRightPanel === 'footnotes'}
+                    onOpenChange={(open) =>
+                        handleRightPanelOpenChange('footnotes', open)
+                    }
+                    title={t('articles.editor.footnotes')}
+                    description={t('articles.editor.footnotes_sheet')}
+                >
+                    <div className="px-4 pt-4 pb-6">
                         <FootnotesPanel
                             editor={editor}
                             onEditFootnote={openFootnoteDialog}
@@ -1051,23 +1025,38 @@ export default function ArticleDocumentEditor({
                             canEdit={!readOnly}
                         />
                     </div>
-                </SheetContent>
-            </Sheet>
+                </EditorSidePanel>
 
-            <Sheet
-                open={spellCheckSheetOpen}
-                onOpenChange={handleSpellCheckSheetOpenChange}
-            >
-                <SheetContent className="w-full sm:max-w-md">
-                    <SheetHeader className="border-b border-border/60 pb-4">
-                        <SheetTitle>
-                            {t('articles.editor.spellcheck')}
-                        </SheetTitle>
-                        <SheetDescription>
-                            {t('articles.editor.spellcheck_sheet')}
-                        </SheetDescription>
-                    </SheetHeader>
-                    <div className="overflow-y-auto px-4 pt-4 pb-6">
+                <EditorSidePanel
+                    open={activeRightPanel === 'media'}
+                    onOpenChange={(open) =>
+                        handleRightPanelOpenChange('media', open)
+                    }
+                    title={t('articles.editor.media')}
+                    description={t('articles.editor.media_sheet')}
+                >
+                    <div className="px-4 pt-4 pb-6">
+                        <ArticleMediaPanel
+                            editor={editor}
+                            mediaItems={mediaItems}
+                            onUploadClick={openImageUploadDialog}
+                            onEditMedia={openImageEditDialog}
+                            onDeleteMedia={handleMediaDelete}
+                            getUsedMediaIds={getUsedMediaIds}
+                            canEdit={!readOnly}
+                        />
+                    </div>
+                </EditorSidePanel>
+
+                <EditorSidePanel
+                    open={activeRightPanel === 'spellcheck'}
+                    onOpenChange={(open) =>
+                        handleRightPanelOpenChange('spellcheck', open)
+                    }
+                    title={t('articles.editor.spellcheck')}
+                    description={t('articles.editor.spellcheck_sheet')}
+                >
+                    <div className="px-4 pt-4 pb-6">
                         <SpellCheckPanel
                             editor={editor}
                             hasRun={hasRun}
@@ -1079,94 +1068,40 @@ export default function ArticleDocumentEditor({
                             }}
                         />
                     </div>
-                </SheetContent>
-            </Sheet>
+                </EditorSidePanel>
 
-            <SpellCheckPopover
-                editor={editor}
-                matchId={spellCheckPopoverMatchId}
-                anchorRect={spellCheckPopoverRect}
-                onClose={closeSpellCheckPopover}
-                onFocusMatch={handleFocusSpellCheckMatch}
-            />
-
-            {!readOnly && (
-                <ArticleImageDialog
-                    open={imageDialogOpen}
-                    onOpenChange={setImageDialogOpen}
-                    mode={imageDialogMode}
-                    media={editingMedia}
-                    uploading={mediaUploading}
-                    onUpload={handleImageUpload}
-                    onSave={handleImageMetadataSave}
-                />
-            )}
-
-            <Sheet open={mediaSheetOpen} onOpenChange={setMediaSheetOpen}>
-                <SheetContent className="w-full sm:max-w-md">
-                    <SheetHeader className="border-b border-border/60 pb-4">
-                        <SheetTitle>{t('articles.editor.media')}</SheetTitle>
-                        <SheetDescription>
-                            {t('articles.editor.media_sheet')}
-                        </SheetDescription>
-                    </SheetHeader>
-                    <div className="overflow-y-auto px-4 pt-4 pb-6">
-                        <ArticleMediaPanel
-                            editor={editor}
-                            mediaItems={mediaItems}
-                            onUploadClick={openImageUploadDialog}
-                            onEditMedia={openImageEditDialog}
-                            onDeleteMedia={handleMediaDelete}
-                            getUsedMediaIds={getUsedMediaIds}
-                            canEdit={!readOnly}
-                        />
-                    </div>
-                </SheetContent>
-            </Sheet>
-
-            <Sheet
-                open={workflowHistorySheetOpen}
-                onOpenChange={setWorkflowHistorySheetOpen}
-            >
-                <SheetContent className="w-full sm:max-w-md">
-                    <SheetHeader className="border-b border-border/60 pb-4">
-                        <SheetTitle>
-                            {t('articles.editor.history')}
-                        </SheetTitle>
-                        <SheetDescription>
-                            {t('articles.editor.history_sheet')}
-                        </SheetDescription>
-                    </SheetHeader>
-                    <div className="overflow-y-auto px-4 pt-4 pb-6">
+                <EditorSidePanel
+                    open={activeRightPanel === 'history'}
+                    onOpenChange={(open) =>
+                        handleRightPanelOpenChange('history', open)
+                    }
+                    title={t('articles.editor.history')}
+                    description={t('articles.editor.history_sheet')}
+                >
+                    <div className="px-4 pt-4 pb-6">
                         <WorkflowHistoryPanel events={workflowEvents} />
                     </div>
-                </SheetContent>
-            </Sheet>
+                </EditorSidePanel>
 
-            {articleId !== undefined && (
-                <Sheet
-                    open={versionSheetOpen}
-                    onOpenChange={setVersionSheetOpen}
-                >
-                    <SheetContent
-                        className={cn(
-                            'w-full',
+                {articleId !== undefined && (
+                    <EditorSidePanel
+                        open={activeRightPanel === 'versions'}
+                        onOpenChange={(open) =>
+                            handleRightPanelOpenChange('versions', open)
+                        }
+                        title={t('articles.editor.versions')}
+                        description={
                             versionView === 'compare'
-                                ? 'sm:max-w-4xl'
-                                : 'sm:max-w-md',
-                        )}
+                                ? t('articles.versions.compare_hint')
+                                : t('articles.editor.versions_sheet')
+                        }
+                        className={
+                            versionView === 'compare'
+                                ? 'sm:w-[56rem]'
+                                : undefined
+                        }
                     >
-                        <SheetHeader className="border-b border-border/60 pb-4">
-                            <SheetTitle>
-                                {t('articles.editor.versions')}
-                            </SheetTitle>
-                            <SheetDescription>
-                                {versionView === 'compare'
-                                    ? t('articles.versions.compare_hint')
-                                    : t('articles.editor.versions_sheet')}
-                            </SheetDescription>
-                        </SheetHeader>
-                        <div className="overflow-y-auto px-4 pb-6">
+                        <div className="px-4 pb-6">
                             <div className="flex gap-1 pt-4">
                                 <Button
                                     type="button"
@@ -1209,14 +1144,65 @@ export default function ArticleDocumentEditor({
                                     onBaseChange={setCompareBaseId}
                                     onCompareChange={setCompareTargetId}
                                     onNavigateToEditor={() =>
-                                        setVersionSheetOpen(false)
+                                        setActiveRightPanel(null)
                                     }
                                 />
                             )}
                         </div>
-                    </SheetContent>
-                </Sheet>
+                    </EditorSidePanel>
+                )}
+            </div>
+
+            {!readOnly && (
+                <>
+                    <FootnoteDialog
+                        open={footnoteDialogOpen}
+                        onOpenChange={handleFootnoteDialogOpenChange}
+                        value={footnoteText}
+                        onChange={setFootnoteText}
+                        onSave={saveFootnote}
+                        onRemove={
+                            footnoteMode === 'edit'
+                                ? removeEditingFootnote
+                                : undefined
+                        }
+                        excerpt={footnoteExcerpt}
+                        mode={footnoteMode}
+                    />
+
+                    <MathDialog
+                        open={mathDialogOpen}
+                        onOpenChange={handleMathDialogOpenChange}
+                        value={mathLatex}
+                        onChange={setMathLatex}
+                        onSave={saveMath}
+                        onRemove={mathMode === 'edit' ? removeMath : undefined}
+                        variant={mathVariant}
+                        mode={mathMode}
+                    />
+                </>
             )}
+
+            <SpellCheckPopover
+                editor={editor}
+                matchId={spellCheckPopoverMatchId}
+                anchorRect={spellCheckPopoverRect}
+                onClose={closeSpellCheckPopover}
+                onFocusMatch={handleFocusSpellCheckMatch}
+            />
+
+            {!readOnly && (
+                <ArticleImageDialog
+                    open={imageDialogOpen}
+                    onOpenChange={setImageDialogOpen}
+                    mode={imageDialogMode}
+                    media={editingMedia}
+                    uploading={mediaUploading}
+                    onUpload={handleImageUpload}
+                    onSave={handleImageMetadataSave}
+                />
+            )}
+
         </>
     );
 }
