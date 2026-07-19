@@ -4,6 +4,7 @@ return [
     'dashboard' => 'Dashboard',
     'articles' => 'Artikel',
     'publications' => 'Publikationen',
+    'handbook' => 'Handbuch',
     'editor_settings' => 'Editor-Einstellungen',
     'users' => 'Benutzer',
     'settings' => 'Einstellungen',

@@ -18,6 +18,7 @@ class TranslationLoader
         'editor',
         'users',
         'messages',
+        'handbook',
     ];
 
     /**

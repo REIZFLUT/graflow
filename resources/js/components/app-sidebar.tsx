@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { FileText, LayoutGrid, Newspaper, SlidersHorizontal, Users } from 'lucide-react';
+import { BookOpen, FileText, LayoutGrid, Newspaper, SlidersHorizontal, Users } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -16,6 +16,7 @@ import { useTranslation } from '@/hooks/use-translation';
 import { dashboard } from '@/routes';
 import { index as articlesIndex } from '@/routes/articles';
 import { index as editorSettingsSetsIndex } from '@/routes/editor-settings-sets';
+import { show as handbookShow } from '@/routes/handbook';
 import { index as publicationsIndex } from '@/routes/publications';
 import { index as usersIndex } from '@/routes/users';
 import type { NavItem } from '@/types';
@@ -39,6 +40,11 @@ export function AppSidebar() {
             title: t('nav.publications'),
             href: publicationsIndex(),
             icon: Newspaper,
+        },
+        {
+            title: t('nav.handbook'),
+            href: handbookShow(),
+            icon: BookOpen,
         },
         ...(can.manageEditorSettingsSets
             ? [
