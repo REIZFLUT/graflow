@@ -35,9 +35,9 @@ class DemoSeederTest extends TestCase
         $this->seed(DatabaseSeeder::class);
 
         $this->assertSame(9, User::query()->count());
-        $this->assertSame(2, Publication::query()->count());
-        $this->assertSame(4, PublicationIssue::query()->count());
-        $this->assertSame(15, Article::query()->count());
+        $this->assertSame(2, $this->demoPublications()->count());
+        $this->assertSame(4, PublicationIssue::query()->whereIn('publication_id', $this->demoPublicationIds())->count());
+        $this->assertSame(15, $this->demoArticles()->count());
         $this->assertDatabaseHas('users', [
             'email' => 'lector@example.com',
             'role' => 'lector',
@@ -66,9 +66,9 @@ class DemoSeederTest extends TestCase
     {
         $this->seed(DatabaseSeeder::class);
 
-        $this->assertSame(8, PublicationChapter::query()->count());
+        $this->assertSame(8, $this->demoChapters()->count());
 
-        foreach (PublicationIssue::query()->with('chapters.articles')->get() as $issue) {
+        foreach (PublicationIssue::query()->whereIn('publication_id', $this->demoPublicationIds())->with('chapters.articles')->get() as $issue) {
             $this->assertCount(2, $issue->chapters);
             $this->assertSame([1, 2], $issue->chapters->pluck('position')->all());
 
@@ -83,7 +83,7 @@ class DemoSeederTest extends TestCase
 
         $this->assertGreaterThanOrEqual(
             6,
-            PublicationChapter::query()
+            $this->demoChapters()
                 ->withCount('articles')
                 ->get()
                 ->where('articles_count', '>=', 2)
@@ -92,12 +92,12 @@ class DemoSeederTest extends TestCase
 
         foreach (ArticleStatus::cases() as $status) {
             $this->assertTrue(
-                Article::query()->where('status', $status)->exists(),
+                $this->demoArticles()->where('status', $status)->exists(),
                 "No demo article represents the [{$status->value}] workflow state.",
             );
         }
 
-        $articles = Article::query()
+        $articles = $this->demoArticles()
             ->with(['author', 'currentAssignee', 'participants', 'workflowEvents'])
             ->get();
 
@@ -145,17 +145,55 @@ class DemoSeederTest extends TestCase
             );
         }
 
-        $workflowEventCount = Article::query()->withCount('workflowEvents')->get()->sum('workflow_events_count');
+        $workflowEventCount = $this->demoArticles()->withCount('workflowEvents')->get()->sum('workflow_events_count');
 
         $this->seed(DatabaseSeeder::class);
 
         $this->assertSame(9, User::query()->count());
-        $this->assertSame(15, Article::query()->count());
-        $this->assertSame(8, PublicationChapter::query()->count());
-        $this->assertSame(23, ArticleMedia::query()->count());
+        $this->assertSame(15, $this->demoArticles()->count());
+        $this->assertSame(8, $this->demoChapters()->count());
+        $this->assertSame(23, ArticleMedia::query()->whereIn('article_id', $this->demoArticles()->pluck('id'))->count());
         $this->assertSame(
             $workflowEventCount,
-            Article::query()->withCount('workflowEvents')->get()->sum('workflow_events_count'),
+            $this->demoArticles()->withCount('workflowEvents')->get()->sum('workflow_events_count'),
+        );
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Builder<Publication>
+     */
+    private function demoPublications(): \Illuminate\Database\Eloquent\Builder
+    {
+        return Publication::query()->where('name', '!=', config('handbook.name'));
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, int>
+     */
+    private function demoPublicationIds(): \Illuminate\Support\Collection
+    {
+        return $this->demoPublications()->pluck('id');
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Builder<Article>
+     */
+    private function demoArticles(): \Illuminate\Database\Eloquent\Builder
+    {
+        return Article::query()->whereIn(
+            'publication_issue_id',
+            PublicationIssue::query()->whereIn('publication_id', $this->demoPublicationIds())->pluck('id'),
+        );
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Builder<PublicationChapter>
+     */
+    private function demoChapters(): \Illuminate\Database\Eloquent\Builder
+    {
+        return PublicationChapter::query()->whereIn(
+            'publication_issue_id',
+            PublicationIssue::query()->whereIn('publication_id', $this->demoPublicationIds())->pluck('id'),
         );
     }
 

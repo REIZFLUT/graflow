@@ -6,6 +6,7 @@ use App\Enums\ArticleStatus;
 use App\Enums\UserRole;
 use App\Models\Article;
 use App\Models\User;
+use App\Support\Handbook;
 
 class ArticlePolicy
 {
@@ -20,7 +21,8 @@ class ArticlePolicy
             || $user->id === $article->product_manager_id
             || $user->id === $article->author_id
             || $user->id === $article->current_assignee_id
-            || $article->participants()->where('user_id', $user->id)->exists();
+            || $article->participants()->where('user_id', $user->id)->exists()
+            || Handbook::containsArticle($article);
     }
 
     public function create(User $user): bool

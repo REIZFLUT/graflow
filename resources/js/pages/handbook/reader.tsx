@@ -1,6 +1,14 @@
 import { Form, Head, Link, router, setLayoutProps } from '@inertiajs/react';
-import { Pencil, Plus, Search, Trash2, X } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import {
+    ChevronDown,
+    ChevronRight,
+    Pencil,
+    Plus,
+    Search,
+    Trash2,
+    X,
+} from 'lucide-react';
+import { useCallback, useMemo, useState } from 'react';
 import { storeArticle } from '@/actions/App/Http/Controllers/HandbookController';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
@@ -71,6 +79,23 @@ export default function HandbookReader({
 }: PageProps) {
     const { t } = useTranslation();
     const [query, setQuery] = useState('');
+    const [collapsedChapters, setCollapsedChapters] = useState<Set<string>>(
+        new Set(),
+    );
+
+    const toggleChapter = useCallback((key: string) => {
+        setCollapsedChapters((current) => {
+            const next = new Set(current);
+
+            if (next.has(key)) {
+                next.delete(key);
+            } else {
+                next.add(key);
+            }
+
+            return next;
+        });
+    }, []);
 
     setLayoutProps({
         breadcrumbs: [
@@ -138,6 +163,16 @@ export default function HandbookReader({
     const hasAnyArticles = articles.length > 0;
     const hasVisibleArticles = visibleArticles.length > 0;
 
+    const tocGroupKeys = [
+        ...sortedChapters
+            .filter((chapter) => articlesForChapter(chapter.id).length > 0)
+            .map((chapter) => String(chapter.id)),
+        ...(unassignedArticles.length > 0 ? ['unassigned'] : []),
+    ];
+    const allChaptersCollapsed =
+        tocGroupKeys.length > 0 &&
+        tocGroupKeys.every((key) => collapsedChapters.has(key));
+
     const scrollToArticle = (id: number) => {
         document
             .getElementById(articleAnchorId(id))
@@ -153,24 +188,45 @@ export default function HandbookReader({
             return null;
         }
 
+        const groupKey = String(key);
+        const isExpanded = isSearching || !collapsedChapters.has(groupKey);
+
         return (
-            <div key={key} className="space-y-1">
-                <p className="px-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                    {heading}
-                </p>
-                <ul className="space-y-0.5">
-                    {groupArticles.map((article) => (
-                        <li key={article.id}>
-                            <button
-                                type="button"
-                                onClick={() => scrollToArticle(article.id)}
-                                className="w-full truncate rounded-md px-2 py-1.5 text-left text-sm text-foreground/80 transition-colors hover:bg-muted hover:text-foreground"
-                            >
-                                {article.title}
-                            </button>
-                        </li>
-                    ))}
-                </ul>
+            <div key={groupKey} className="space-y-1">
+                <button
+                    type="button"
+                    onClick={() => toggleChapter(groupKey)}
+                    aria-expanded={isExpanded}
+                    disabled={isSearching}
+                    className="flex w-full items-center gap-1 rounded-md px-2 py-1 text-left text-xs font-semibold tracking-wide text-muted-foreground uppercase transition-colors hover:bg-muted hover:text-foreground disabled:cursor-default disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
+                    title={
+                        isExpanded
+                            ? t('handbook.toc.collapse')
+                            : t('handbook.toc.expand')
+                    }
+                >
+                    {isExpanded ? (
+                        <ChevronDown className="size-3.5 shrink-0" />
+                    ) : (
+                        <ChevronRight className="size-3.5 shrink-0" />
+                    )}
+                    <span className="truncate">{heading}</span>
+                </button>
+                {isExpanded && (
+                    <ul className="space-y-0.5 pl-4">
+                        {groupArticles.map((article) => (
+                            <li key={article.id}>
+                                <button
+                                    type="button"
+                                    onClick={() => scrollToArticle(article.id)}
+                                    className="w-full truncate rounded-md px-2 py-1.5 text-left text-sm text-foreground/80 transition-colors hover:bg-muted hover:text-foreground"
+                                >
+                                    {article.title}
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                )}
             </div>
         );
     };
@@ -230,10 +286,29 @@ export default function HandbookReader({
                 ) : (
                     <div className="grid gap-8 lg:grid-cols-[16rem_minmax(0,1fr)]">
                         <aside className="hidden lg:block">
-                            <nav className="sticky top-4 space-y-4 rounded-xl border border-sidebar-border/70 p-3 dark:border-sidebar-border">
-                                <p className="px-2 text-sm font-semibold">
-                                    {t('handbook.toc.title')}
-                                </p>
+                            <nav className="sticky top-4 flex max-h-[calc(100svh-2rem)] flex-col gap-4 overflow-y-auto overscroll-contain rounded-xl border border-sidebar-border/70 p-3 dark:border-sidebar-border">
+                                <div className="flex items-center justify-between gap-2 px-2">
+                                    <p className="text-sm font-semibold">
+                                        {t('handbook.toc.title')}
+                                    </p>
+                                    {hasVisibleArticles && !isSearching && (
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setCollapsedChapters(
+                                                    allChaptersCollapsed
+                                                        ? new Set()
+                                                        : new Set(tocGroupKeys),
+                                                )
+                                            }
+                                            className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+                                        >
+                                            {allChaptersCollapsed
+                                                ? t('handbook.toc.expand_all')
+                                                : t('handbook.toc.collapse_all')}
+                                        </button>
+                                    )}
+                                </div>
                                 {hasVisibleArticles ? (
                                     <div className="space-y-4">
                                         {sortedChapters.map((chapter) =>

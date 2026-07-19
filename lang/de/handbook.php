@@ -16,6 +16,10 @@ return [
 
     'toc' => [
         'title' => 'Inhalt',
+        'expand' => 'Kapitel ausklappen',
+        'collapse' => 'Kapitel einklappen',
+        'expand_all' => 'Alle ausklappen',
+        'collapse_all' => 'Alle einklappen',
     ],
 
     'actions' => [

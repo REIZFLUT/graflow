@@ -27,3 +27,11 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+
+# Plesk server artifacts
+/.php-ini
+/.php-version
+/.node-version
+/public/.php-ini
+/public/.php-version
+/index.html

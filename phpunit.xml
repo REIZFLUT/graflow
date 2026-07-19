@@ -32,5 +32,11 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <env name="LANGUAGETOOL_DRIVER" value="local"/>
+        <env name="LANGUAGETOOL_URL" value=""/>
+        <env name="LANGUAGETOOL_API_TOKEN" value=""/>
+        <env name="LANGUAGETOOL_API_URL" value=""/>
+        <env name="LANGUAGETOOL_API_USERNAME" value=""/>
+        <env name="LANGUAGETOOL_API_KEY" value=""/>
     </php>
 </phpunit>

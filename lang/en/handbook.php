@@ -16,6 +16,10 @@ return [
 
     'toc' => [
         'title' => 'Contents',
+        'expand' => 'Expand chapter',
+        'collapse' => 'Collapse chapter',
+        'expand_all' => 'Expand all',
+        'collapse_all' => 'Collapse all',
     ],
 
     'actions' => [

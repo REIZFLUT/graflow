@@ -20,6 +20,21 @@ class Handbook
     }
 
     /**
+     * Determine whether the given article belongs to the handbook issue.
+     * Matches by publication name and issue label without creating anything.
+     */
+    public static function containsArticle(\App\Models\Article $article): bool
+    {
+        $article->loadMissing('publicationIssue.publication');
+
+        $issue = $article->publicationIssue;
+
+        return $issue !== null
+            && $issue->label === static::issueLabel()
+            && $issue->publication?->name === static::name();
+    }
+
+    /**
      * Resolve the handbook publication, creating it (owned by an administrator)
      * when it does not exist yet. Returns null when no administrator exists to
      * own the publication.

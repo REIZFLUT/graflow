@@ -6,8 +6,11 @@ use App\Enums\ArticleStatus;
 use App\Models\Article;
 use App\Models\Publication;
 use App\Models\User;
+use App\Services\ArticleMediaService;
 use App\Support\Handbook;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class HandbookTest extends TestCase
@@ -146,5 +149,60 @@ class HandbookTest extends TestCase
         User::factory()->author()->create();
 
         $this->assertNull(Handbook::resolveIssue());
+    }
+
+    public function test_handbook_article_media_is_viewable_by_every_user(): void
+    {
+        Storage::fake((string) config('article-media.disk'));
+
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)
+            ->post(route('handbook.articles.store'), ['title' => 'Artikel mit Screenshot'])
+            ->assertRedirect();
+
+        $article = Article::query()->where('title', 'Artikel mit Screenshot')->firstOrFail();
+
+        $media = app(ArticleMediaService::class)->storeForArticle(
+            UploadedFile::fake()->image('screenshot.png', 640, 480),
+            $article,
+            $admin,
+            ['alt_text' => 'Screenshot', 'copyright' => 'Graflow'],
+        );
+
+        $reader = User::factory()->author()->create();
+
+        $this->actingAs($reader)
+            ->get(route('articles.media.file', [
+                'article' => $article->id,
+                'media' => $media->id,
+                'variant' => 'preview-webp',
+            ]))
+            ->assertOk();
+    }
+
+    public function test_regular_article_media_stays_hidden_from_uninvolved_users(): void
+    {
+        Storage::fake((string) config('article-media.disk'));
+
+        $article = Article::factory()->create();
+        $owner = $article->owner;
+
+        $media = app(ArticleMediaService::class)->storeForArticle(
+            UploadedFile::fake()->image('photo.png', 640, 480),
+            $article,
+            $owner,
+            ['alt_text' => 'Foto', 'copyright' => 'Test'],
+        );
+
+        $stranger = User::factory()->author()->create();
+
+        $this->actingAs($stranger)
+            ->get(route('articles.media.file', [
+                'article' => $article->id,
+                'media' => $media->id,
+                'variant' => 'preview-webp',
+            ]))
+            ->assertForbidden();
     }
 }
