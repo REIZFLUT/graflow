@@ -17,7 +17,7 @@ class UpdateArticleMetadataRequest extends FormRequest
         /** @var Article $article */
         $article = $this->route('article');
 
-        return $this->user()?->can('update', $article) ?? false;
+        return $this->user()?->can('manageWorkflow', $article) ?? false;
     }
 
     /**
@@ -31,10 +31,12 @@ class UpdateArticleMetadataRequest extends FormRequest
             ->all();
 
         $publicationId = null;
+        $publicationIssueId = null;
 
         if ($this->filled('publication_issue_id')) {
+            $publicationIssueId = $this->integer('publication_issue_id');
             $publicationId = PublicationIssue::query()
-                ->whereKey($this->integer('publication_issue_id'))
+                ->whereKey($publicationIssueId)
                 ->whereIn('publication_id', $userPublicationIds)
                 ->value('publication_id');
         }
@@ -44,6 +46,18 @@ class UpdateArticleMetadataRequest extends FormRequest
                 'nullable',
                 'integer',
                 Rule::exists('publication_issues', 'id')->whereIn('publication_id', $userPublicationIds),
+            ],
+            'publication_chapter_id' => [
+                Rule::excludeIf(fn (): bool => ! $this->filled('publication_issue_id')),
+                'nullable',
+                'integer',
+                Rule::exists('publication_chapters', 'id')
+                    ->where('publication_issue_id', $publicationIssueId),
+            ],
+            'position' => [
+                Rule::requiredIf(fn (): bool => $this->filled('publication_issue_id')),
+                'integer',
+                'min:1',
             ],
             'publication_category_ids' => ['nullable', 'array'],
             'publication_category_ids.*' => [

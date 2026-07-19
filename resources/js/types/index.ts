@@ -6,4 +6,5 @@ export type * from './auth';
 export type * from './navigation';
 export type * from './publication';
 export { formatPublicationAssignment, defaultPublicationEditorSettings } from './publication';
+export type * from './users';
 export type * from './ui';

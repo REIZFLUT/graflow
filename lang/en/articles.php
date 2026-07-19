@@ -1,18 +1,24 @@
 <?php
 
 return [
-    'title' => 'Articles',
-    'description' => 'Create and edit your articles',
+    'title' => 'My tasks',
+    'description' => 'Articles you are responsible for or involved in',
     'new_article' => 'New article',
-    'empty' => 'You have not created any articles yet.',
+    'empty' => 'There are currently no articles assigned to you.',
     'create_first' => 'Create your first article',
 
     'table' => [
         'title' => 'Title',
         'status' => 'Status',
-        'publication' => 'Publication',
+        'publication' => 'Issue',
+        'chapter_position' => 'Chapter / position',
+        'author' => 'Author',
+        'assignee' => 'Current assignee',
+        'deadline' => 'Deadline',
+        'target_count' => 'Target characters',
         'updated_at' => 'Last updated',
     ],
+    'pagination' => 'Article pages',
 
     'create' => [
         'head_title' => 'New article',
@@ -43,6 +49,18 @@ return [
             'manage_issues' => 'Manage issues',
         ],
 
+        'chapter' => [
+            'label' => 'Chapter',
+            'placeholder' => 'Select chapter',
+            'unassigned' => 'No chapter',
+            'no_chapters' => 'No chapters have been created for this issue yet.',
+        ],
+
+        'position' => [
+            'label' => 'Article position',
+            'description' => 'Controls the article order within its chapter.',
+        ],
+
         'categories' => [
             'heading' => 'Categories',
             'description' => 'Select one or more categories from the publication.',
@@ -65,9 +83,93 @@ return [
     ],
 
     'status' => [
-        'draft' => 'Draft',
+        'planned' => 'Planned',
+        'authoring' => 'In authoring',
+        'manuscript_submitted' => 'Manuscript submitted',
+        'product_manager_correction' => 'Product manager correction',
+        'revision_requested' => 'Revision requested',
+        'revision' => 'In revision',
+        'editorial_work' => 'Editorial work',
+        'ready_for_publication' => 'Ready for publication',
         'published' => 'Published',
-        'archived' => 'Archived',
+    ],
+
+    'workflow' => [
+        'assignee' => 'Assignee',
+        'assignee_placeholder' => 'Select a person',
+        'status' => 'Status',
+        'reason' => 'Reason',
+        'reason_placeholder' => 'Add context for this workflow step…',
+        'optional' => '(optional)',
+        'history_empty' => 'No workflow entries yet.',
+        'history' => [
+            'transition' => ':from → :to',
+            'initial' => 'Article created',
+        ],
+        'roles' => [
+            'author' => 'Author',
+            'editor' => 'Editor',
+            'lector' => 'Lector',
+        ],
+        'actions' => [
+            'submit_manuscript' => 'Submit',
+            'complete_editorial_work' => 'Finish',
+            'force_status' => 'Set status',
+            'request_revision' => 'Request revision',
+            'assign_author' => 'Assign author',
+            'assign_editorial' => 'Assign editor / lector',
+            'recall' => 'Recall',
+            'mark_ready' => 'Mark ready',
+            'publish' => 'Publish',
+            'start_product_manager_correction' => 'Start correction',
+            'complete_product_manager_correction' => 'Finish correction',
+        ],
+        'dialogs' => [
+            'submit_manuscript' => [
+                'title' => 'Submit manuscript?',
+                'description' => 'Hand the manuscript to product management. It will then be locked for you.',
+            ],
+            'complete_editorial_work' => [
+                'title' => 'Finish editorial work?',
+                'description' => 'Mark your work as finished and hand the article to product management.',
+            ],
+            'force_status' => [
+                'title' => 'Set status administratively',
+                'description' => 'This admin override bypasses the regular workflow and is recorded in the history.',
+            ],
+            'request_revision' => [
+                'title' => 'Request a revision?',
+                'description' => 'Explain what needs to be revised. A reason is required.',
+            ],
+            'assign_author' => [
+                'title' => 'Assign an author',
+                'description' => 'Select the author who should work on the manuscript.',
+            ],
+            'assign_editorial' => [
+                'title' => 'Assign editorial work',
+                'description' => 'Select an editor or lector for the next workflow step.',
+            ],
+            'recall' => [
+                'title' => 'Recall editorial work?',
+                'description' => 'Return the article to the submitted-manuscript stage.',
+            ],
+            'mark_ready' => [
+                'title' => 'Mark article ready?',
+                'description' => 'Confirm that the article is ready for publication.',
+            ],
+            'publish' => [
+                'title' => 'Publish article?',
+                'description' => 'Publishing locks the article and all mutation controls.',
+            ],
+            'start_product_manager_correction' => [
+                'title' => 'Start product manager correction?',
+                'description' => 'You can edit the text directly. All changes are versioned and recorded in the workflow history.',
+            ],
+            'complete_product_manager_correction' => [
+                'title' => 'Finish product manager correction?',
+                'description' => 'Finish your correction and return the article to the submitted-manuscript stage.',
+            ],
+        ],
     ],
 
     'editor' => [
@@ -76,9 +178,11 @@ return [
         'media' => 'Media',
         'metadata' => 'Metadata',
         'versions' => 'Versions',
+        'history' => 'History',
         'save' => 'Save',
         'title_placeholder' => 'Untitled article',
         'versions_sheet' => 'Each save creates a new version.',
+        'history_sheet' => 'All workflow steps for this article.',
         'footnotes_sheet' => 'Overview of all footnotes in this article.',
         'spellcheck' => 'Spell check',
         'spellcheck_sheet' => 'Spelling, grammar, and style suggestions found in the article.',
@@ -89,6 +193,10 @@ return [
     'stats' => [
         'words' => ':count words',
         'letters' => ':count letters',
+        'letters_target' => ':count / :target letters (:progress%)',
+        'assignee' => 'Assignee',
+        'deadline' => 'Deadline',
+        'overdue' => 'Overdue',
     ],
 
     'footnote' => [
@@ -140,8 +248,8 @@ return [
         'select_compare' => 'Comparison version',
         'select_placeholder' => 'Select version',
         'option_label' => 'Version :number · :status · :date',
-        'quick_draft_vs_published' => 'Last draft ↔ latest published',
-        'no_draft' => 'No draft version available yet.',
+        'quick_workflow_vs_published' => 'Latest working version ↔ latest published',
+        'no_unpublished' => 'No unpublished version available yet.',
         'no_published' => 'No published version available yet.',
         'need_two_versions' => 'At least two versions are required to compare.',
         'select_two' => 'Select two versions to compare.',
@@ -157,6 +265,9 @@ return [
     'assignment' => [
         'with_publication' => ':publication – Issue :issue',
         'issue_only' => 'Issue :issue',
+        'with_chapter' => ':chapter · Position :position',
+        'with_chapter_id' => 'Chapter #:chapter · Position :position',
+        'unassigned_position' => 'Unassigned · Position :position',
     ],
 
     'pdf' => [

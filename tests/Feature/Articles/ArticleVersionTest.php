@@ -31,19 +31,19 @@ class ArticleVersionTest extends TestCase
         ];
     }
 
-    public function test_store_creates_first_version(): void
+    public function test_update_creates_first_version(): void
     {
         $user = User::factory()->create();
+        $article = Article::factory()->for($user, 'owner')->create();
 
         $this->actingAs($user)
-            ->post(route('articles.store'), [
+            ->put(route('articles.update', $article), [
                 'title' => 'Versioned Article',
                 'content' => $this->tipTapContent(),
-            ]);
+            ])
+            ->assertRedirect(route('articles.edit', $article));
 
-        $article = Article::query()->first();
-
-        $this->assertNotNull($article);
+        $article->refresh();
         $this->assertSame(1, $article->versions()->count());
 
         $version = $article->versions()->first();
@@ -67,7 +67,6 @@ class ArticleVersionTest extends TestCase
             ->put(route('articles.update', $article), [
                 'title' => 'Second Save',
                 'content' => $this->tipTapContent('Second'),
-                'status' => 'draft',
             ]);
 
         $article->refresh();
@@ -124,29 +123,23 @@ class ArticleVersionTest extends TestCase
     {
         $user = User::factory()->create();
         $article = Article::factory()->for($user, 'owner')->create([
-            'title' => 'Draft Stage',
-            'content' => $this->tipTapContent('Draft'),
-            'status' => 'draft',
+            'title' => 'Working Stage',
+            'content' => $this->tipTapContent('Working'),
         ]);
 
-        $this->actingAs($user)
-            ->put(route('articles.update', $article), [
-                'title' => 'Draft Stage',
-                'content' => $this->tipTapContent('Draft'),
-                'status' => 'draft',
-            ]);
+        app(ArticleVersionService::class)->snapshot($article, $user);
 
-        $this->actingAs($user)
-            ->put(route('articles.update', $article), [
-                'title' => 'Published Stage',
-                'content' => $this->tipTapContent('Published'),
-                'status' => 'published',
-            ]);
+        $article->update([
+            'title' => 'Published Stage',
+            'content' => $this->tipTapContent('Published'),
+            'status' => 'published',
+        ]);
+        app(ArticleVersionService::class)->snapshot($article, $user);
 
         $article->refresh();
 
-        $lastDraft = $article->versions()
-            ->where('status', 'draft')
+        $lastWorkingVersion = $article->versions()
+            ->where('status', 'authoring')
             ->orderByDesc('version_number')
             ->first();
 
@@ -155,11 +148,11 @@ class ArticleVersionTest extends TestCase
             ->orderByDesc('version_number')
             ->first();
 
-        $this->assertNotNull($lastDraft);
-        $this->assertSame('Draft Stage', $lastDraft->title);
+        $this->assertNotNull($lastWorkingVersion);
+        $this->assertSame('Working Stage', $lastWorkingVersion->title);
         $this->assertNotNull($latestPublished);
         $this->assertSame('Published Stage', $latestPublished->title);
-        $this->assertTrue($latestPublished->version_number > $lastDraft->version_number);
+        $this->assertTrue($latestPublished->version_number > $lastWorkingVersion->version_number);
     }
 
     public function test_restore_rejects_version_from_other_article(): void

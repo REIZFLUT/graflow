@@ -1,13 +1,13 @@
 import type { Editor } from '@tiptap/react';
-import { useEffect } from 'react';
 import { Trash2 } from 'lucide-react';
+import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/hooks/use-translation';
 import {
     focusFootnoteInEditor,
     getFootnotesFromEditor,
-    type ArticleFootnote,
 } from '@/lib/tiptap/footnote-utils';
+import type { ArticleFootnote } from '@/lib/tiptap/footnote-utils';
 import { cn } from '@/lib/utils';
 
 type FootnotesPanelProps = {
@@ -17,6 +17,7 @@ type FootnotesPanelProps = {
     onFocusFootnote?: (footnote: ArticleFootnote) => void;
     focusedFootnoteId?: string | null;
     className?: string;
+    canEdit?: boolean;
 };
 
 export default function FootnotesPanel({
@@ -26,6 +27,7 @@ export default function FootnotesPanel({
     onFocusFootnote,
     focusedFootnoteId = null,
     className,
+    canEdit = true,
 }: FootnotesPanelProps) {
     const { t } = useTranslation();
 
@@ -89,30 +91,34 @@ export default function FootnotesPanel({
                                     excerpt: footnote.excerpt,
                                 })}
                             </button>
-                            <div className="flex shrink-0 items-center gap-1">
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-7 px-2 text-xs"
-                                    onClick={() => {
-                                        handleFocusInEditor(footnote);
-                                        onEditFootnote(footnote);
-                                    }}
-                                >
-                                    {t('common.edit')}
-                                </Button>
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-7 px-2 text-xs text-destructive hover:text-destructive"
-                                    onClick={() => onRemoveFootnote(footnote)}
-                                >
-                                    <Trash2 className="size-3.5" />
-                                    {t('common.remove')}
-                                </Button>
-                            </div>
+                            {canEdit && (
+                                <div className="flex shrink-0 items-center gap-1">
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-7 px-2 text-xs"
+                                        onClick={() => {
+                                            handleFocusInEditor(footnote);
+                                            onEditFootnote(footnote);
+                                        }}
+                                    >
+                                        {t('common.edit')}
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-7 px-2 text-xs text-destructive hover:text-destructive"
+                                        onClick={() =>
+                                            onRemoveFootnote(footnote)
+                                        }
+                                    >
+                                        <Trash2 className="size-3.5" />
+                                        {t('common.remove')}
+                                    </Button>
+                                </div>
+                            )}
                         </div>
                         <button
                             type="button"

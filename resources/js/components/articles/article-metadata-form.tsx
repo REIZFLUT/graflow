@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
 import { usePage } from '@inertiajs/react';
+import { useMemo, useState } from 'react';
 import InputError from '@/components/input-error';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import SearchableMultiSelect from '@/components/ui/searchable-multi-select';
 import {
@@ -26,6 +27,10 @@ type ArticleMetadataFormProps = {
     assignedPublicationId?: number | null;
     publicationIssueId: number | null;
     onPublicationIssueIdChange: (issueId: number | null) => void;
+    publicationChapterId: number | null;
+    onPublicationChapterIdChange: (chapterId: number | null) => void;
+    position: number;
+    onPositionChange: (position: number) => void;
     publicationCategoryIds: number[];
     onPublicationCategoryIdsChange: (categoryIds: number[]) => void;
     editorSettingsSets: EditorSettingsSet[];
@@ -34,9 +39,12 @@ type ArticleMetadataFormProps = {
     defaultEditorSettingsSet: EditorSettingsSet | null;
     errors: {
         publication_issue_id?: string;
+        publication_chapter_id?: string;
+        position?: string;
         publication_category_ids?: string;
         editor_settings_set_id?: string;
     };
+    readOnly?: boolean;
 };
 
 const NONE_VALUE = '__none__';
@@ -46,6 +54,10 @@ export default function ArticleMetadataForm({
     assignedPublicationId = null,
     publicationIssueId,
     onPublicationIssueIdChange,
+    publicationChapterId,
+    onPublicationChapterIdChange,
+    position,
+    onPositionChange,
     publicationCategoryIds,
     onPublicationCategoryIdsChange,
     editorSettingsSets,
@@ -53,6 +65,7 @@ export default function ArticleMetadataForm({
     onEditorSettingsSetIdChange,
     defaultEditorSettingsSet,
     errors,
+    readOnly = false,
 }: ArticleMetadataFormProps) {
     const { t } = useTranslation();
     const { can } = usePage().props;
@@ -80,10 +93,6 @@ export default function ArticleMetadataForm({
         number | null
     >(initialPublicationId);
 
-    useEffect(() => {
-        setSelectedPublicationId(initialPublicationId);
-    }, [initialPublicationId]);
-
     const availableIssues: PublicationIssue[] = useMemo(() => {
         if (!selectedPublicationId) {
             return [];
@@ -95,6 +104,17 @@ export default function ArticleMetadataForm({
 
         return publication?.issues ?? [];
     }, [publications, selectedPublicationId]);
+
+    const availableChapters = useMemo(() => {
+        const selectedIssue = availableIssues.find(
+            (issue) => issue.id === publicationIssueId,
+        );
+
+        return [...(selectedIssue?.chapters ?? [])].sort(
+            (first, second) =>
+                first.position - second.position || first.id - second.id,
+        );
+    }, [availableIssues, publicationIssueId]);
 
     const availableCategories: PublicationCategory[] = useMemo(() => {
         if (!selectedPublicationId) {
@@ -130,6 +150,7 @@ export default function ArticleMetadataForm({
         if (value === NONE_VALUE) {
             setSelectedPublicationId(null);
             onPublicationIssueIdChange(null);
+            onPublicationChapterIdChange(null);
             onPublicationCategoryIdsChange([]);
 
             return;
@@ -137,6 +158,7 @@ export default function ArticleMetadataForm({
 
         const publicationId = Number(value);
         setSelectedPublicationId(publicationId);
+        onPublicationChapterIdChange(null);
 
         const publication = publications.find(
             (item) => item.id === publicationId,
@@ -160,12 +182,14 @@ export default function ArticleMetadataForm({
     const handleIssueChange = (value: string) => {
         if (value === NONE_VALUE) {
             onPublicationIssueIdChange(null);
+            onPublicationChapterIdChange(null);
             onPublicationCategoryIdsChange([]);
 
             return;
         }
 
         onPublicationIssueIdChange(Number(value));
+        onPublicationChapterIdChange(null);
     };
 
     const categoryOptions = availableCategories.map((category) => ({
@@ -197,11 +221,9 @@ export default function ArticleMetadataForm({
                                     : NONE_VALUE
                             }
                             onValueChange={handlePublicationChange}
+                            disabled={readOnly}
                         >
-                            <SelectTrigger
-                                id="publication"
-                                className="w-full"
-                            >
+                            <SelectTrigger id="publication" className="w-full">
                                 <SelectValue
                                     placeholder={t(
                                         'articles.metadata.publication.placeholder',
@@ -236,6 +258,7 @@ export default function ArticleMetadataForm({
                             }
                             onValueChange={handleIssueChange}
                             disabled={
+                                readOnly ||
                                 !selectedPublicationId ||
                                 availableIssues.length === 0
                             }
@@ -271,19 +294,94 @@ export default function ArticleMetadataForm({
                             availableIssues.length === 0 && (
                                 <p className="text-sm text-muted-foreground">
                                     {t('articles.metadata.issue.no_issues')}{' '}
-                                    <a
-                                        href={edit.url({
-                                            publication: selectedPublicationId,
-                                        })}
-                                        className="underline"
-                                    >
-                                        {t(
-                                            'articles.metadata.issue.manage_issues',
-                                        )}
-                                    </a>
+                                    {!readOnly && (
+                                        <a
+                                            href={edit.url({
+                                                publication:
+                                                    selectedPublicationId,
+                                            })}
+                                            className="underline"
+                                        >
+                                            {t(
+                                                'articles.metadata.issue.manage_issues',
+                                            )}
+                                        </a>
+                                    )}
                                 </p>
                             )}
                         <InputError message={errors.publication_issue_id} />
+                    </div>
+
+                    <div className="grid gap-2">
+                        <Label htmlFor="chapter">
+                            {t('articles.metadata.chapter.label')}
+                        </Label>
+                        <Select
+                            value={
+                                publicationChapterId
+                                    ? String(publicationChapterId)
+                                    : NONE_VALUE
+                            }
+                            onValueChange={(value) =>
+                                onPublicationChapterIdChange(
+                                    value === NONE_VALUE ? null : Number(value),
+                                )
+                            }
+                            disabled={
+                                readOnly ||
+                                !publicationIssueId ||
+                                availableChapters.length === 0
+                            }
+                        >
+                            <SelectTrigger id="chapter" className="w-full">
+                                <SelectValue
+                                    placeholder={t(
+                                        'articles.metadata.chapter.placeholder',
+                                    )}
+                                />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value={NONE_VALUE}>
+                                    {t('articles.metadata.chapter.unassigned')}
+                                </SelectItem>
+                                {availableChapters.map((chapter) => (
+                                    <SelectItem
+                                        key={chapter.id}
+                                        value={String(chapter.id)}
+                                    >
+                                        {chapter.position}. {chapter.title}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        {publicationIssueId &&
+                            availableChapters.length === 0 && (
+                                <p className="text-sm text-muted-foreground">
+                                    {t('articles.metadata.chapter.no_chapters')}
+                                </p>
+                            )}
+                        <InputError message={errors.publication_chapter_id} />
+                    </div>
+
+                    <div className="grid gap-2">
+                        <Label htmlFor="article-position">
+                            {t('articles.metadata.position.label')}
+                        </Label>
+                        <Input
+                            id="article-position"
+                            type="number"
+                            min="1"
+                            value={position}
+                            onChange={(event) =>
+                                onPositionChange(Number(event.target.value))
+                            }
+                            required
+                            disabled={readOnly}
+                        />
+                        <p className="text-sm text-muted-foreground">
+                            {t('articles.metadata.position.description')}
+                        </p>
+                        <InputError message={errors.position} />
                     </div>
                 </div>
             </section>
@@ -305,14 +403,16 @@ export default function ArticleMetadataForm({
                 ) : availableCategories.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
                         {t('articles.metadata.categories.no_categories')}{' '}
-                        <a
-                            href={edit.url({
-                                publication: selectedPublicationId,
-                            })}
-                            className="underline"
-                        >
-                            {t('articles.metadata.categories.manage')}
-                        </a>
+                        {!readOnly && (
+                            <a
+                                href={edit.url({
+                                    publication: selectedPublicationId,
+                                })}
+                                className="underline"
+                            >
+                                {t('articles.metadata.categories.manage')}
+                            </a>
+                        )}
                     </p>
                 ) : (
                     <SearchableMultiSelect
@@ -327,6 +427,7 @@ export default function ArticleMetadataForm({
                             'articles.metadata.categories.search_placeholder',
                         )}
                         emptyMessage={t('articles.metadata.categories.empty')}
+                        disabled={readOnly}
                         removeAriaLabel={(label) =>
                             `${t('common.remove')} ${label}`
                         }
@@ -384,6 +485,7 @@ export default function ArticleMetadataForm({
                                                 : Number(value),
                                         );
                                     }}
+                                    disabled={readOnly}
                                 >
                                     <SelectTrigger
                                         id="editor_settings_set_id"
@@ -427,12 +529,14 @@ export default function ArticleMetadataForm({
                                         'articles.metadata.editor_settings.create_set_hint',
                                     )}
                                 </p>
-                                <a
-                                    href={createEditorSettingsSet.url()}
-                                    className="mt-2 inline-block underline"
-                                >
-                                    {t('common.create_set')}
-                                </a>
+                                {!readOnly && (
+                                    <a
+                                        href={createEditorSettingsSet.url()}
+                                        className="mt-2 inline-block underline"
+                                    >
+                                        {t('common.create_set')}
+                                    </a>
+                                )}
                             </div>
                         )}
                     </div>

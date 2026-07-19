@@ -10,7 +10,6 @@ use App\Models\ArticleMedia;
 use App\Services\ArticleMediaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -78,7 +77,7 @@ class ArticleMediaController extends Controller
         return response()->json(null, 204);
     }
 
-    public function serveStagingFile(ArticleMedia $media, string $variant): StreamedResponse|Response
+    public function serveStagingFile(ArticleMedia $media, string $variant): StreamedResponse
     {
         $this->authorize('view', $media);
         abort_unless($media->isStaging(), 404);
@@ -99,7 +98,7 @@ class ArticleMediaController extends Controller
 
     public function store(StoreArticleMediaRequest $request, Article $article): JsonResponse
     {
-        $this->authorize('update', $article);
+        $this->authorize('updateContent', $article);
 
         $media = $this->articleMediaService->storeForArticle(
             $request->file('file'),
@@ -119,7 +118,7 @@ class ArticleMediaController extends Controller
 
     public function update(UpdateArticleMediaRequest $request, Article $article, ArticleMedia $media): JsonResponse
     {
-        $this->authorize('update', $article);
+        $this->authorize('updateContent', $article);
         abort_unless($media->article_id === $article->id, 404);
 
         $media = $this->articleMediaService->updateMetadata($media, $request->validated());
@@ -131,7 +130,7 @@ class ArticleMediaController extends Controller
 
     public function destroy(Article $article, ArticleMedia $media): JsonResponse
     {
-        $this->authorize('update', $article);
+        $this->authorize('updateContent', $article);
         abort_unless($media->article_id === $article->id, 404);
 
         if ($this->articleMediaService->isReferencedInContent($media, $article)) {
@@ -145,7 +144,7 @@ class ArticleMediaController extends Controller
         return response()->json(null, 204);
     }
 
-    public function serveFile(Article $article, ArticleMedia $media, string $variant): StreamedResponse|Response
+    public function serveFile(Article $article, ArticleMedia $media, string $variant): StreamedResponse
     {
         $this->authorize('view', $article);
         abort_unless($media->article_id === $article->id, 404);
@@ -153,7 +152,7 @@ class ArticleMediaController extends Controller
         return $this->streamMediaFile($media, $variant);
     }
 
-    private function streamMediaFile(ArticleMedia $media, string $variant): StreamedResponse|Response
+    private function streamMediaFile(ArticleMedia $media, string $variant): StreamedResponse
     {
         $path = $this->articleMediaService->resolveFilePath($media, $variant);
         $disk = Storage::disk(config('article-media.disk'));

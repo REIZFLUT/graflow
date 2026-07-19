@@ -1,11 +1,20 @@
 import { Head, Link } from '@inertiajs/react';
-import { Plus } from 'lucide-react';
+import { Eye, Plus } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { useTranslation } from '@/hooks/use-translation';
 import { translate } from '@/lib/i18n';
 import { create, edit, index } from '@/routes/publications';
-import type { PaginatedPublications } from '@/types';
+import { show as showReader } from '@/routes/publications/issues/reader';
+import type { PaginatedPublications, Publication } from '@/types';
 
 type PageProps = {
     publications: PaginatedPublications;
@@ -13,6 +22,21 @@ type PageProps = {
 
 export default function PublicationsIndex({ publications }: PageProps) {
     const { t } = useTranslation();
+    const [selectedPublicationId, setSelectedPublicationId] = useState<
+        number | null
+    >(null);
+
+    const selectedPublication = useMemo(
+        () =>
+            publications.data.find(
+                (publication) => publication.id === selectedPublicationId,
+            ) ?? null,
+        [publications.data, selectedPublicationId],
+    );
+
+    const openIssueDialog = (publication: Publication) => {
+        setSelectedPublicationId(publication.id);
+    };
 
     return (
         <>
@@ -65,7 +89,8 @@ export default function PublicationsIndex({ publications }: PageProps) {
                             </thead>
                             <tbody>
                                 {publications.data.map((publication) => {
-                                    const canEdit = publication.can_edit !== false;
+                                    const canEdit =
+                                        publication.can_edit !== false;
 
                                     return (
                                         <tr
@@ -81,33 +106,58 @@ export default function PublicationsIndex({ publications }: PageProps) {
                                             <td className="px-4 py-3 text-muted-foreground">
                                                 {canEdit
                                                     ? t('common.em_dash')
-                                                    : t('publications.owned_by', {
-                                                          name:
-                                                              publication.owner
-                                                                  ?.name ??
-                                                              t('common.unknown'),
-                                                      })}
+                                                    : t(
+                                                          'publications.owned_by',
+                                                          {
+                                                              name:
+                                                                  publication
+                                                                      .owner
+                                                                      ?.name ??
+                                                                  t(
+                                                                      'common.unknown',
+                                                                  ),
+                                                          },
+                                                      )}
                                             </td>
-                                            <td className="px-4 py-3 text-right">
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    asChild
-                                                >
-                                                    <Link
-                                                        href={edit({
-                                                            publication:
-                                                                publication.id,
-                                                        })}
-                                                        prefetch
+                                            <td className="px-4 py-3">
+                                                <div className="flex flex-wrap items-center justify-end gap-2">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        type="button"
+                                                        onClick={() =>
+                                                            openIssueDialog(
+                                                                publication,
+                                                            )
+                                                        }
                                                     >
-                                                        {canEdit
-                                                            ? t('common.edit')
-                                                            : t(
-                                                                  'publications.view',
-                                                              )}
-                                                    </Link>
-                                                </Button>
+                                                        <Eye className="size-4" />
+                                                        {t(
+                                                            'publications.view_issue',
+                                                        )}
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        asChild
+                                                    >
+                                                        <Link
+                                                            href={edit({
+                                                                publication:
+                                                                    publication.id,
+                                                            })}
+                                                            prefetch
+                                                        >
+                                                            {canEdit
+                                                                ? t(
+                                                                      'common.edit',
+                                                                  )
+                                                                : t(
+                                                                      'publications.view',
+                                                                  )}
+                                                        </Link>
+                                                    </Button>
+                                                </div>
                                             </td>
                                         </tr>
                                     );
@@ -117,6 +167,55 @@ export default function PublicationsIndex({ publications }: PageProps) {
                     </div>
                 )}
             </div>
+
+            <Dialog
+                open={selectedPublicationId !== null}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setSelectedPublicationId(null);
+                    }
+                }}
+            >
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>
+                            {t('publications.reader.modal_title')}
+                        </DialogTitle>
+                        <DialogDescription>
+                            {t('publications.reader.select_issue')}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {selectedPublication === null ||
+                    (selectedPublication.issues?.length ?? 0) === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                            {t('publications.reader.no_issues')}
+                        </p>
+                    ) : (
+                        <ul className="divide-y divide-border rounded-lg border border-border">
+                            {selectedPublication.issues?.map((issue) => (
+                                <li key={issue.id}>
+                                    <a
+                                        href={showReader.url({
+                                            publication:
+                                                selectedPublication.id,
+                                            issue: issue.id,
+                                        })}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="block px-4 py-3 text-sm font-medium transition-colors hover:bg-muted/60"
+                                        onClick={() =>
+                                            setSelectedPublicationId(null)
+                                        }
+                                    >
+                                        {issue.label}
+                                    </a>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </DialogContent>
+            </Dialog>
         </>
     );
 }

@@ -2,12 +2,12 @@ import type { Editor } from '@tiptap/react';
 import { Plus } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from '@/hooks/use-translation';
-import { cn } from '@/lib/utils';
 import {
     getTopLevelBlockAtSelection,
     getTopLevelBlocksWithMarginalNotes,
     setMarginalNoteAtPosition,
 } from '@/lib/tiptap/block-utils';
+import { cn } from '@/lib/utils';
 
 type PositionedMarginalBlock = {
     id: string;
@@ -19,6 +19,7 @@ type PositionedMarginalBlock = {
 
 type MarginalNotesColumnProps = {
     editor: Editor;
+    readOnly?: boolean;
 };
 
 const MARGINAL_NOTE_FOCUS_EVENT = 'marginal-note-focus';
@@ -31,6 +32,7 @@ function MarginalNoteField({
     onStopEditing,
     onChange,
     addAriaLabel,
+    readOnly,
 }: {
     block: PositionedMarginalBlock;
     isActive: boolean;
@@ -39,16 +41,25 @@ function MarginalNoteField({
     onStopEditing: () => void;
     onChange: (value: string) => void;
     addAriaLabel: string;
+    readOnly: boolean;
 }) {
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const hasContent = Boolean(block.marginalNote?.trim());
     const showEditor = hasContent || isEditing;
 
     useEffect(() => {
-        if (showEditor && isEditing && textareaRef.current) {
+        if (!readOnly && showEditor && isEditing && textareaRef.current) {
             textareaRef.current.focus();
         }
-    }, [isEditing, showEditor]);
+    }, [isEditing, readOnly, showEditor]);
+
+    if (readOnly) {
+        return hasContent ? (
+            <p className="marginal-note-field w-full px-0 py-0.5">
+                {block.marginalNote}
+            </p>
+        ) : null;
+    }
 
     if (!showEditor) {
         return (
@@ -86,7 +97,10 @@ function MarginalNoteField({
     );
 }
 
-export default function MarginalNotesColumn({ editor }: MarginalNotesColumnProps) {
+export default function MarginalNotesColumn({
+    editor,
+    readOnly = false,
+}: MarginalNotesColumnProps) {
     const { t } = useTranslation();
     const columnRef = useRef<HTMLDivElement>(null);
     const [blocks, setBlocks] = useState<PositionedMarginalBlock[]>([]);
@@ -109,7 +123,9 @@ export default function MarginalNotesColumn({ editor }: MarginalNotesColumnProps
 
         const positionedBlocks: PositionedMarginalBlock[] = marginalBlocks
             .map((block) => {
-                const dom = editor.view.nodeDOM(block.pos) as HTMLElement | null;
+                const dom = editor.view.nodeDOM(
+                    block.pos,
+                ) as HTMLElement | null;
 
                 if (!dom) {
                     return null;
@@ -125,12 +141,15 @@ export default function MarginalNotesColumn({ editor }: MarginalNotesColumnProps
                     node: block.node,
                 };
             })
-            .filter((block): block is PositionedMarginalBlock => block !== null);
+            .filter(
+                (block): block is PositionedMarginalBlock => block !== null,
+            );
 
         setBlocks(positionedBlocks);
 
         const currentBlock = getTopLevelBlockAtSelection(editor);
-        const currentId = (currentBlock?.node.attrs.id as string | undefined) ?? null;
+        const currentId =
+            (currentBlock?.node.attrs.id as string | undefined) ?? null;
         setActiveBlockId(currentId);
     }, [editor]);
 
@@ -188,16 +207,13 @@ export default function MarginalNotesColumn({ editor }: MarginalNotesColumnProps
     const visibleBlocks = blocks.filter(
         (block) =>
             block.marginalNote?.trim() ||
-            block.id === activeBlockId ||
-            block.id === editingBlockId,
+            (!readOnly &&
+                (block.id === activeBlockId || block.id === editingBlockId)),
     );
 
     return (
         <>
-            <div
-                className="hidden min-h-full lg:block"
-                aria-hidden
-            >
+            <div className="hidden min-h-full lg:block" aria-hidden>
                 <div
                     ref={columnRef}
                     className="marginal-notes-column group/margin relative min-h-full"
@@ -217,10 +233,9 @@ export default function MarginalNotesColumn({ editor }: MarginalNotesColumnProps
                                     setEditingBlockId(block.id)
                                 }
                                 onStopEditing={() => setEditingBlockId(null)}
-                                onChange={(value) =>
-                                    handleChange(block, value)
-                                }
+                                onChange={(value) => handleChange(block, value)}
                                 addAriaLabel={t('editor.marginal.add_aria')}
+                                readOnly={readOnly}
                             />
                         </div>
                     ))}
@@ -239,6 +254,7 @@ export default function MarginalNotesColumn({ editor }: MarginalNotesColumnProps
                             onStopEditing={() => setEditingBlockId(null)}
                             onChange={(value) => handleChange(block, value)}
                             addAriaLabel={t('editor.marginal.add_aria')}
+                            readOnly={readOnly}
                         />
                     ))}
                 </div>

@@ -1,18 +1,24 @@
 <?php
 
 return [
-    'title' => 'Artikel',
-    'description' => 'Erstelle und bearbeite deine Artikel',
+    'title' => 'Meine Aufgaben',
+    'description' => 'Artikel, für die du verantwortlich oder an denen du beteiligt bist',
     'new_article' => 'Neuer Artikel',
-    'empty' => 'Du hast noch keine Artikel erstellt.',
+    'empty' => 'Dir sind aktuell keine Artikel zugeordnet.',
     'create_first' => 'Ersten Artikel erstellen',
 
     'table' => [
         'title' => 'Titel',
         'status' => 'Status',
-        'publication' => 'Publikation',
+        'publication' => 'Ausgabe',
+        'chapter_position' => 'Kapitel / Position',
+        'author' => 'Autor',
+        'assignee' => 'Aktuell verantwortlich',
+        'deadline' => 'Abgabefrist',
+        'target_count' => 'Ziel-Zeichen',
         'updated_at' => 'Zuletzt bearbeitet',
     ],
+    'pagination' => 'Artikelseiten',
 
     'create' => [
         'head_title' => 'Neuer Artikel',
@@ -43,6 +49,18 @@ return [
             'manage_issues' => 'Ausgaben verwalten',
         ],
 
+        'chapter' => [
+            'label' => 'Kapitel',
+            'placeholder' => 'Kapitel wählen',
+            'unassigned' => 'Kein Kapitel',
+            'no_chapters' => 'Für diese Ausgabe sind noch keine Kapitel angelegt.',
+        ],
+
+        'position' => [
+            'label' => 'Artikelposition',
+            'description' => 'Bestimmt die Reihenfolge des Artikels innerhalb seines Kapitels.',
+        ],
+
         'categories' => [
             'heading' => 'Kategorien',
             'description' => 'Wähle eine oder mehrere Kategorien der Publikation.',
@@ -65,9 +83,93 @@ return [
     ],
 
     'status' => [
-        'draft' => 'Entwurf',
+        'planned' => 'Geplant',
+        'authoring' => 'In Bearbeitung',
+        'manuscript_submitted' => 'Manuskript eingereicht',
+        'product_manager_correction' => 'Produktmanager Korrektur',
+        'revision_requested' => 'Überarbeitung angefordert',
+        'revision' => 'In Überarbeitung',
+        'editorial_work' => 'Im Lektorat',
+        'ready_for_publication' => 'Bereit zur Veröffentlichung',
         'published' => 'Veröffentlicht',
-        'archived' => 'Archiviert',
+    ],
+
+    'workflow' => [
+        'assignee' => 'Verantwortliche Person',
+        'assignee_placeholder' => 'Person auswählen',
+        'status' => 'Status',
+        'reason' => 'Begründung',
+        'reason_placeholder' => 'Kontext zu diesem Workflow-Schritt ergänzen…',
+        'optional' => '(optional)',
+        'history_empty' => 'Noch keine Workflow-Einträge.',
+        'history' => [
+            'transition' => ':from → :to',
+            'initial' => 'Artikel angelegt',
+        ],
+        'roles' => [
+            'author' => 'Autor:in',
+            'editor' => 'Redakteur:in',
+            'lector' => 'Lektor:in',
+        ],
+        'actions' => [
+            'submit_manuscript' => 'Abgeben',
+            'complete_editorial_work' => 'Fertig',
+            'force_status' => 'Status setzen',
+            'request_revision' => 'Überarbeitung anfordern',
+            'assign_author' => 'Autor:in zuweisen',
+            'assign_editorial' => 'Redaktion / Lektorat zuweisen',
+            'recall' => 'Zurückrufen',
+            'mark_ready' => 'Als bereit markieren',
+            'publish' => 'Veröffentlichen',
+            'start_product_manager_correction' => 'Korrektur starten',
+            'complete_product_manager_correction' => 'Korrektur abschließen',
+        ],
+        'dialogs' => [
+            'submit_manuscript' => [
+                'title' => 'Manuskript abgeben?',
+                'description' => 'Übergib das Manuskript an das Produktmanagement. Danach ist es für dich gesperrt.',
+            ],
+            'complete_editorial_work' => [
+                'title' => 'Bearbeitung abschließen?',
+                'description' => 'Markiere deine Bearbeitung als fertig und übergib den Artikel an das Produktmanagement.',
+            ],
+            'force_status' => [
+                'title' => 'Status administrativ setzen',
+                'description' => 'Dieser Admin-Eingriff umgeht den regulären Workflow und wird im Verlauf protokolliert.',
+            ],
+            'request_revision' => [
+                'title' => 'Überarbeitung anfordern?',
+                'description' => 'Beschreibe die erforderlichen Änderungen. Eine Begründung ist Pflicht.',
+            ],
+            'assign_author' => [
+                'title' => 'Autor:in zuweisen',
+                'description' => 'Wähle die Person, die am Manuskript arbeiten soll.',
+            ],
+            'assign_editorial' => [
+                'title' => 'Redaktionelle Arbeit zuweisen',
+                'description' => 'Wähle Redaktion oder Lektorat für den nächsten Workflow-Schritt.',
+            ],
+            'recall' => [
+                'title' => 'Redaktionelle Arbeit zurückrufen?',
+                'description' => 'Setze den Artikel auf den Stand „Manuskript eingereicht“ zurück.',
+            ],
+            'mark_ready' => [
+                'title' => 'Artikel als bereit markieren?',
+                'description' => 'Bestätige, dass der Artikel veröffentlicht werden kann.',
+            ],
+            'publish' => [
+                'title' => 'Artikel veröffentlichen?',
+                'description' => 'Nach der Veröffentlichung sind alle Änderungen gesperrt.',
+            ],
+            'start_product_manager_correction' => [
+                'title' => 'Produktmanager-Korrektur starten?',
+                'description' => 'Du kannst den Text direkt bearbeiten. Alle Änderungen werden versioniert und im Workflow-Verlauf dokumentiert.',
+            ],
+            'complete_product_manager_correction' => [
+                'title' => 'Produktmanager-Korrektur abschließen?',
+                'description' => 'Schließe deine Korrektur ab und setze den Artikel auf „Manuskript eingereicht“ zurück.',
+            ],
+        ],
     ],
 
     'editor' => [
@@ -76,9 +178,11 @@ return [
         'media' => 'Medien',
         'metadata' => 'Metadaten',
         'versions' => 'Versionen',
+        'history' => 'Verlauf',
         'save' => 'Speichern',
         'title_placeholder' => 'Unbenannter Artikel',
         'versions_sheet' => 'Jeder Speichervorgang erstellt eine neue Version.',
+        'history_sheet' => 'Alle Workflow-Schritte dieses Artikels.',
         'footnotes_sheet' => 'Alle Fußnoten des Artikels im Überblick.',
         'spellcheck' => 'Rechtschreibprüfung',
         'spellcheck_sheet' => 'Gefundene Rechtschreib-, Grammatik- und Stilhinweise.',
@@ -89,6 +193,10 @@ return [
     'stats' => [
         'words' => ':count Wörter',
         'letters' => ':count Buchstaben',
+        'letters_target' => ':count / :target Buchstaben (:progress %)',
+        'assignee' => 'Verantwortlich',
+        'deadline' => 'Abgabefrist',
+        'overdue' => 'Überfällig',
     ],
 
     'footnote' => [
@@ -140,8 +248,8 @@ return [
         'select_compare' => 'Vergleichs-Version',
         'select_placeholder' => 'Version wählen',
         'option_label' => 'Version :number · :status · :date',
-        'quick_draft_vs_published' => 'Letzter Entwurf ↔ Aktuelle Veröffentlichung',
-        'no_draft' => 'Noch keine Entwurfs-Version vorhanden.',
+        'quick_workflow_vs_published' => 'Letzte Arbeitsversion ↔ Aktuelle Veröffentlichung',
+        'no_unpublished' => 'Noch keine unveröffentlichte Version vorhanden.',
         'no_published' => 'Noch keine veröffentlichte Version vorhanden.',
         'need_two_versions' => 'Für einen Vergleich werden mindestens zwei Versionen benötigt.',
         'select_two' => 'Wähle zwei Versionen zum Vergleichen.',
@@ -157,6 +265,9 @@ return [
     'assignment' => [
         'with_publication' => ':publication – Ausgabe :issue',
         'issue_only' => 'Ausgabe :issue',
+        'with_chapter' => ':chapter · Position :position',
+        'with_chapter_id' => 'Kapitel #:chapter · Position :position',
+        'unassigned_position' => 'Nicht zugeordnet · Position :position',
     ],
 
     'pdf' => [

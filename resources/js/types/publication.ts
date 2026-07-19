@@ -1,3 +1,7 @@
+import type { TranslateFn } from '@/lib/i18n';
+import type { Article } from './article';
+import type { EditorSettingsSet } from './editor-settings-set';
+
 export type PublicationIssue = {
     id: number;
     publication_id: number;
@@ -5,6 +9,17 @@ export type PublicationIssue = {
     created_at: string;
     updated_at: string;
     publication?: Publication;
+    chapters?: PublicationChapter[];
+    articles?: Article[];
+};
+
+export type PublicationChapter = {
+    id: number;
+    publication_issue_id: number;
+    title: string;
+    position: number;
+    created_at: string;
+    updated_at: string;
 };
 
 export type PublicationEditorFont = 'spectral' | 'roboto';
@@ -39,7 +54,7 @@ export type Publication = {
         name: string;
     };
     can_edit?: boolean;
-    editor_settings_set?: import('./editor-settings-set').EditorSettingsSet;
+    editor_settings_set?: EditorSettingsSet;
     issues?: PublicationIssue[];
     categories?: PublicationCategory[];
     issues_count?: number;
@@ -60,7 +75,7 @@ export type PaginatedPublications = {
 
 export function formatPublicationAssignment(
     issue: PublicationIssue | null | undefined,
-    t: import('@/lib/i18n').TranslateFn,
+    t: TranslateFn,
 ): string | null {
     if (!issue) {
         return null;

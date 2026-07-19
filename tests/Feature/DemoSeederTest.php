@@ -7,8 +7,10 @@ use App\Enums\PublicationEditorFont;
 use App\Models\Article;
 use App\Models\ArticleMedia;
 use App\Models\Publication;
+use App\Models\PublicationChapter;
 use App\Models\PublicationIssue;
 use App\Models\User;
+use App\Services\ArticleMediaService;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\Support\DemoArticleContentBuilder;
 use Database\Seeders\Support\DemoMediaImporter;
@@ -30,10 +32,14 @@ class DemoSeederTest extends TestCase
     {
         $this->seed(DatabaseSeeder::class);
 
-        $this->assertSame(8, User::query()->count());
+        $this->assertSame(9, User::query()->count());
         $this->assertSame(2, Publication::query()->count());
         $this->assertSame(4, PublicationIssue::query()->count());
-        $this->assertSame(15, Article::query()->where('status', ArticleStatus::Published)->count());
+        $this->assertSame(15, Article::query()->count());
+        $this->assertDatabaseHas('users', [
+            'email' => 'lector@example.com',
+            'role' => 'lector',
+        ]);
 
         $book = Publication::query()->where('name', 'GEG Baupraxis Handbuch')->firstOrFail();
         $magazine = Publication::query()->where('name', 'GEG Baupraxis')->firstOrFail();
@@ -54,12 +60,109 @@ class DemoSeederTest extends TestCase
         );
     }
 
+    public function test_demo_seeder_demonstrates_chapter_planning_and_workflow_states(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        $this->assertSame(8, PublicationChapter::query()->count());
+
+        foreach (PublicationIssue::query()->with('chapters.articles')->get() as $issue) {
+            $this->assertCount(2, $issue->chapters);
+            $this->assertSame([1, 2], $issue->chapters->pluck('position')->all());
+
+            foreach ($issue->chapters as $chapter) {
+                $this->assertNotEmpty($chapter->articles);
+                $this->assertSame(
+                    range(1, $chapter->articles->count()),
+                    $chapter->articles->pluck('position')->all(),
+                );
+            }
+        }
+
+        $this->assertGreaterThanOrEqual(
+            6,
+            PublicationChapter::query()
+                ->withCount('articles')
+                ->get()
+                ->where('articles_count', '>=', 2)
+                ->count(),
+        );
+
+        foreach (ArticleStatus::cases() as $status) {
+            $this->assertTrue(
+                Article::query()->where('status', $status)->exists(),
+                "No demo article represents the [{$status->value}] workflow state.",
+            );
+        }
+
+        $articles = Article::query()
+            ->with(['author', 'currentAssignee', 'participants', 'workflowEvents'])
+            ->get();
+
+        foreach ($articles as $article) {
+            $this->assertNotNull($article->product_manager_id);
+            $this->assertNotNull($article->author_id);
+            $this->assertNotNull($article->publication_chapter_id);
+            $this->assertGreaterThan(0, $article->position);
+            $this->assertNotNull($article->submission_deadline);
+            $this->assertGreaterThan(0, $article->target_character_count);
+
+            if ($article->status === ArticleStatus::Published) {
+                $this->assertNotNull($article->published_at);
+            } else {
+                $this->assertNull($article->published_at);
+            }
+
+            if (in_array($article->status, [ArticleStatus::Authoring, ArticleStatus::Revision], true)) {
+                $this->assertSame($article->author_id, $article->current_assignee_id);
+            } elseif ($article->status === ArticleStatus::ProductManagerCorrection) {
+                $this->assertSame($article->product_manager_id, $article->current_assignee_id);
+            } elseif ($article->status === ArticleStatus::EditorialWork) {
+                $this->assertNotNull($article->currentAssignee);
+                $this->assertContains($article->currentAssignee->role->value, ['editor', 'lector']);
+            } else {
+                $this->assertNull($article->current_assignee_id);
+            }
+
+            $participantIds = $article->participants->pluck('user_id');
+            $this->assertContains($article->product_manager_id, $participantIds);
+            $this->assertContains($article->author_id, $participantIds);
+
+            foreach ($article->workflowEvents as $event) {
+                $this->assertNotSame('', $event->reason);
+
+                if ($event->assignee_id !== null) {
+                    $this->assertContains($event->assignee_id, $participantIds);
+                }
+            }
+
+            $this->assertNotEmpty($article->workflowEvents);
+            $this->assertSame(
+                $article->status,
+                $article->workflowEvents->sortBy('created_at')->last()->to_status,
+            );
+        }
+
+        $workflowEventCount = Article::query()->withCount('workflowEvents')->get()->sum('workflow_events_count');
+
+        $this->seed(DatabaseSeeder::class);
+
+        $this->assertSame(9, User::query()->count());
+        $this->assertSame(15, Article::query()->count());
+        $this->assertSame(8, PublicationChapter::query()->count());
+        $this->assertSame(23, ArticleMedia::query()->count());
+        $this->assertSame(
+            $workflowEventCount,
+            Article::query()->withCount('workflowEvents')->get()->sum('workflow_events_count'),
+        );
+    }
+
     public function test_demo_seeder_creates_correct_image_counts_per_publication_type(): void
     {
         $this->seed(DatabaseSeeder::class);
 
         $contentBuilder = new DemoArticleContentBuilder(
-            new DemoMediaImporter(app(\App\Services\ArticleMediaService::class)),
+            new DemoMediaImporter(app(ArticleMediaService::class)),
         );
 
         $book = Publication::query()->where('name', 'GEG Baupraxis Handbuch')->firstOrFail();
@@ -94,7 +197,7 @@ class DemoSeederTest extends TestCase
         $this->seed(DatabaseSeeder::class);
 
         $contentBuilder = new DemoArticleContentBuilder(
-            new DemoMediaImporter(app(\App\Services\ArticleMediaService::class)),
+            new DemoMediaImporter(app(ArticleMediaService::class)),
         );
 
         $article = Article::query()->orderBy('id')->firstOrFail();
@@ -121,7 +224,7 @@ class DemoSeederTest extends TestCase
         $this->seed(DatabaseSeeder::class);
 
         $contentBuilder = new DemoArticleContentBuilder(
-            new DemoMediaImporter(app(\App\Services\ArticleMediaService::class)),
+            new DemoMediaImporter(app(ArticleMediaService::class)),
         );
 
         $book = Publication::query()->where('name', 'GEG Baupraxis Handbuch')->firstOrFail();

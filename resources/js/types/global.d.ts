@@ -18,6 +18,7 @@ declare module '@inertiajs/core' {
             auth: Auth;
             can: {
                 manageEditorSettingsSets: boolean;
+                manageUsers: boolean;
             };
             sidebarOpen: boolean;
             [key: string]: unknown;

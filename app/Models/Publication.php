@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\UserRole;
 use Database\Factories\PublicationFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -75,6 +76,10 @@ class Publication extends Model
      */
     public function scopeVisibleTo(Builder $query, User $user): Builder
     {
+        if ($user->role === UserRole::Admin) {
+            return $query;
+        }
+
         return $query->where(function (Builder $visible) use ($user): void {
             $visible
                 ->where('owner_id', $user->id)

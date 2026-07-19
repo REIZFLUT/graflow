@@ -1,29 +1,43 @@
 import { Head, useForm } from '@inertiajs/react';
-import { useRef } from 'react';
 import ArticleController from '@/actions/App/Http/Controllers/ArticleController';
 import ArticleDocumentEditor from '@/components/articles/article-document-editor';
+import ArticleWorkflowActions from '@/components/articles/article-workflow-actions';
 import { useArticleMedia } from '@/hooks/use-article-media';
-import { index } from '@/routes/articles';
 import { translate } from '@/lib/i18n';
-import { emptyTipTapDocument, type Article, type TipTapDocument } from '@/types';
+import { index } from '@/routes/articles';
+import { emptyTipTapDocument } from '@/types';
+import type {
+    Article,
+    ArticleCapabilities,
+    ArticleWorkflowAction,
+    ArticleWorkflowEvent,
+    ArticleWorkflowUser,
+    TipTapDocument,
+} from '@/types';
 import type { PublicationEditorSettings } from '@/types';
 
 type PageProps = {
     article: Article;
     editorSettings: PublicationEditorSettings;
+    capabilities: ArticleCapabilities;
+    allowedActions: ArticleWorkflowAction[];
+    workflowEvents: ArticleWorkflowEvent[];
+    authors?: ArticleWorkflowUser[];
+    editorialStaff?: ArticleWorkflowUser[];
 };
 
-export default function ArticlesEdit({ article, editorSettings }: PageProps) {
+export default function ArticlesEdit({
+    article,
+    editorSettings,
+    capabilities,
+    allowedActions,
+    workflowEvents,
+    authors = [],
+    editorialStaff = [],
+}: PageProps) {
     const initialContent = article.content ?? emptyTipTapDocument();
-    const contentRef = useRef<TipTapDocument>(initialContent);
 
-    const {
-        mediaItems,
-        uploading,
-        upload,
-        update,
-        remove,
-    } = useArticleMedia({
+    const { mediaItems, uploading, upload, update, remove } = useArticleMedia({
         articleId: article.id,
         initialMedia: article.media ?? [],
     });
@@ -31,17 +45,10 @@ export default function ArticlesEdit({ article, editorSettings }: PageProps) {
     const { data, setData, put, processing, errors, transform } = useForm<{
         title: string;
         content: TipTapDocument;
-        status: string;
     }>({
         title: article.title,
         content: initialContent,
-        status: article.status,
     });
-
-    transform((formData) => ({
-        ...formData,
-        content: contentRef.current,
-    }));
 
     return (
         <>
@@ -52,24 +59,40 @@ export default function ArticlesEdit({ article, editorSettings }: PageProps) {
                 content={data.content}
                 editorSettings={editorSettings}
                 onTitleChange={(title) => setData('title', title)}
-                onContentChange={(content) => {
-                    contentRef.current = content;
-                    setData('content', content);
+                onContentChange={(content) => setData('content', content)}
+                onSubmit={(content) => {
+                    transform((formData) => ({ ...formData, content }));
+                    put(ArticleController.update.url({ article: article.id }));
                 }}
-                onSubmit={() =>
-                    put(ArticleController.update.url({ article: article.id }))
-                }
                 processing={processing}
                 errors={errors}
-                status={data.status}
-                onStatusChange={(status) => setData('status', status)}
+                status={article.status}
+                readOnly={!capabilities.update_content}
+                canManageMetadata={capabilities.manage_workflow}
+                workflowActions={
+                    <ArticleWorkflowActions
+                        articleId={article.id}
+                        capabilities={capabilities}
+                        allowedActions={allowedActions}
+                        authors={authors}
+                        editorialStaff={editorialStaff}
+                    />
+                }
                 articleId={article.id}
+                currentAssignee={article.current_assignee}
+                submissionDeadline={article.submission_deadline}
+                targetCharacterCount={article.target_character_count}
                 versions={article.versions ?? []}
+                workflowEvents={workflowEvents}
                 mediaItems={mediaItems}
                 mediaUploading={uploading}
-                onMediaUpload={upload}
-                onMediaUpdate={update}
-                onMediaDelete={(media) => remove(media.id)}
+                onMediaUpload={capabilities.update_content ? upload : undefined}
+                onMediaUpdate={capabilities.update_content ? update : undefined}
+                onMediaDelete={
+                    capabilities.update_content
+                        ? (media) => remove(media.id)
+                        : undefined
+                }
             />
         </>
     );

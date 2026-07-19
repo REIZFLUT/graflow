@@ -1,15 +1,12 @@
 import { Head, useForm } from '@inertiajs/react';
-import { useRef } from 'react';
 import ArticleController from '@/actions/App/Http/Controllers/ArticleController';
 import ArticleDocumentEditor from '@/components/articles/article-document-editor';
-import {
-    clearStagingToken,
-    useArticleMedia,
-} from '@/hooks/use-article-media';
+import { clearStagingToken, useArticleMedia } from '@/hooks/use-article-media';
 import { useTranslation } from '@/hooks/use-translation';
 import { translate } from '@/lib/i18n';
 import { create, index } from '@/routes/articles';
-import { emptyTipTapDocument, defaultPublicationEditorSettings, type TipTapDocument } from '@/types';
+import { defaultPublicationEditorSettings, emptyTipTapDocument } from '@/types';
+import type { TipTapDocument } from '@/types';
 
 type PageProps = {
     editorSettings?: typeof defaultPublicationEditorSettings;
@@ -20,16 +17,9 @@ export default function ArticlesCreate({
 }: PageProps) {
     const { t } = useTranslation();
     const initialContent = emptyTipTapDocument();
-    const contentRef = useRef<TipTapDocument>(initialContent);
 
-    const {
-        mediaItems,
-        stagingToken,
-        uploading,
-        upload,
-        update,
-        remove,
-    } = useArticleMedia({});
+    const { mediaItems, stagingToken, uploading, upload, update, remove } =
+        useArticleMedia({});
 
     const { data, setData, post, processing, errors, transform } = useForm<{
         title: string;
@@ -41,12 +31,6 @@ export default function ArticlesCreate({
         staging_token: stagingToken,
     });
 
-    transform((formData) => ({
-        ...formData,
-        content: contentRef.current,
-        staging_token: stagingToken,
-    }));
-
     return (
         <>
             <Head title={t('articles.create.head_title')} />
@@ -56,11 +40,13 @@ export default function ArticlesCreate({
                 content={data.content}
                 editorSettings={editorSettings}
                 onTitleChange={(title) => setData('title', title)}
-                onContentChange={(content) => {
-                    contentRef.current = content;
-                    setData('content', content);
-                }}
-                onSubmit={() => {
+                onContentChange={(content) => setData('content', content)}
+                onSubmit={(content) => {
+                    transform((formData) => ({
+                        ...formData,
+                        content,
+                        staging_token: stagingToken,
+                    }));
                     post(ArticleController.store.url(), {
                         onSuccess: () => {
                             clearStagingToken();

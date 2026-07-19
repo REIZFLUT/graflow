@@ -18,12 +18,14 @@ type VersionHistoryProps = {
     articleId: number;
     versions: ArticleVersion[];
     variant?: 'default' | 'compact';
+    canRestore?: boolean;
 };
 
 export default function VersionHistory({
     articleId,
     versions,
     variant = 'default',
+    canRestore = true,
 }: VersionHistoryProps) {
     const { t, locale } = useTranslation();
 
@@ -56,70 +58,75 @@ export default function VersionHistory({
                             <p className="text-xs text-muted-foreground">
                                 {version.created_by?.name ??
                                     t('common.unknown')}{' '}
-                                ·{' '}
-                                {formatDateTime(version.created_at, locale)}
+                                · {formatDateTime(version.created_at, locale)}
                             </p>
                             <p className="line-clamp-1 text-xs text-muted-foreground">
                                 {version.title}
                             </p>
                         </div>
 
-                        <Dialog>
-                            <DialogTrigger asChild>
-                                <Button
-                                    variant={
-                                        variant === 'compact'
-                                            ? 'ghost'
-                                            : 'outline'
-                                    }
-                                    size="sm"
-                                    data-test={`restore-version-${version.id}`}
-                                >
-                                    {t('articles.versions.restore')}
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                                <DialogTitle>
-                                    {t('articles.versions.restore_title', {
-                                        number: version.version_number,
-                                    })}
-                                </DialogTitle>
-                                <DialogDescription>
-                                    {t('articles.versions.restore_description')}
-                                </DialogDescription>
+                        {canRestore && (
+                            <Dialog>
+                                <DialogTrigger asChild>
+                                    <Button
+                                        variant={
+                                            variant === 'compact'
+                                                ? 'ghost'
+                                                : 'outline'
+                                        }
+                                        size="sm"
+                                        data-test={`restore-version-${version.id}`}
+                                    >
+                                        {t('articles.versions.restore')}
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogTitle>
+                                        {t('articles.versions.restore_title', {
+                                            number: version.version_number,
+                                        })}
+                                    </DialogTitle>
+                                    <DialogDescription>
+                                        {t(
+                                            'articles.versions.restore_description',
+                                        )}
+                                    </DialogDescription>
 
-                                <Form
-                                    {...ArticleVersionController.restore.form({
-                                        article: articleId,
-                                        version: version.id,
-                                    })}
-                                    options={{
-                                        preserveScroll: true,
-                                    }}
-                                >
-                                    {({ processing }) => (
-                                        <DialogFooter className="gap-2">
-                                            <DialogClose asChild>
-                                                <Button variant="secondary">
-                                                    {t('common.cancel')}
+                                    <Form
+                                        {...ArticleVersionController.restore.form(
+                                            {
+                                                article: articleId,
+                                                version: version.id,
+                                            },
+                                        )}
+                                        options={{
+                                            preserveScroll: true,
+                                        }}
+                                    >
+                                        {({ processing }) => (
+                                            <DialogFooter className="gap-2">
+                                                <DialogClose asChild>
+                                                    <Button variant="secondary">
+                                                        {t('common.cancel')}
+                                                    </Button>
+                                                </DialogClose>
+
+                                                <Button
+                                                    disabled={processing}
+                                                    asChild
+                                                >
+                                                    <button type="submit">
+                                                        {t(
+                                                            'articles.versions.restore',
+                                                        )}
+                                                    </button>
                                                 </Button>
-                                            </DialogClose>
-
-                                            <Button
-                                                disabled={processing}
-                                                asChild
-                                            >
-                                                <button type="submit">
-                                                    {t(
-                                                        'articles.versions.restore',
-                                                    )}
-                                                </button>
-                                            </Button>
-                                        </DialogFooter>
-                                    )}
-                                </Form>
-                            </DialogContent>
-                        </Dialog>
+                                            </DialogFooter>
+                                        )}
+                                    </Form>
+                                </DialogContent>
+                            </Dialog>
+                        )}
                     </div>
                 </div>
             ))}

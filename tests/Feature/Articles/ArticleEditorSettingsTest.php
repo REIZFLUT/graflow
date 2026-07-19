@@ -56,17 +56,13 @@ class ArticleEditorSettingsTest extends TestCase
                 ->where('editorSettings.has_marginal_column', true));
     }
 
-    public function test_article_create_uses_default_editor_settings(): void
+    public function test_author_cannot_open_generic_article_create_page(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->author()->create();
 
         $this->actingAs($user)
             ->get(route('articles.create'))
-            ->assertOk()
-            ->assertInertia(fn ($page) => $page
-                ->component('articles/create')
-                ->where('editorSettings.font', PublicationEditorFont::Spectral->value)
-                ->where('editorSettings.has_marginal_column', true));
+            ->assertForbidden();
     }
 
     public function test_article_edit_uses_article_override_over_publication_set(): void

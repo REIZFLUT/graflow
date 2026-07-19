@@ -12,6 +12,7 @@ type ArticleMediaPanelProps = {
     onEditMedia: (media: ArticleMedia) => void;
     onDeleteMedia: (media: ArticleMedia) => Promise<void>;
     getUsedMediaIds: () => string[];
+    canEdit?: boolean;
 };
 
 export default function ArticleMediaPanel({
@@ -21,6 +22,7 @@ export default function ArticleMediaPanel({
     onEditMedia,
     onDeleteMedia,
     getUsedMediaIds,
+    canEdit = true,
 }: ArticleMediaPanelProps) {
     const { t } = useTranslation();
     const usedMediaIds = new Set(getUsedMediaIds());
@@ -31,22 +33,31 @@ export default function ArticleMediaPanel({
                 <p className="text-sm text-muted-foreground">
                     {t('articles.media.empty')}
                 </p>
-                <Button type="button" size="sm" onClick={onUploadClick}>
-                    <ImagePlus className="size-4" />
-                    {t('articles.media.upload_button')}
-                </Button>
+                {canEdit && (
+                    <Button type="button" size="sm" onClick={onUploadClick}>
+                        <ImagePlus className="size-4" />
+                        {t('articles.media.upload_button')}
+                    </Button>
+                )}
             </div>
         );
     }
 
     return (
         <div className="space-y-4">
-            <div className="flex justify-end">
-                <Button type="button" size="sm" variant="outline" onClick={onUploadClick}>
-                    <ImagePlus className="size-4" />
-                    {t('articles.media.upload_button')}
-                </Button>
-            </div>
+            {canEdit && (
+                <div className="flex justify-end">
+                    <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={onUploadClick}
+                    >
+                        <ImagePlus className="size-4" />
+                        {t('articles.media.upload_button')}
+                    </Button>
+                </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
                 {mediaItems.map((media) => {
@@ -76,39 +87,46 @@ export default function ArticleMediaPanel({
                                         {t('articles.media.used_in_article')}
                                     </p>
                                 )}
-                                <div className="flex flex-wrap gap-1">
-                                    <Button
-                                        type="button"
-                                        size="sm"
-                                        variant="secondary"
-                                        className="h-7 px-2 text-xs"
-                                        disabled={!editor}
-                                        onClick={() =>
-                                            editor &&
-                                            insertArticleImage(editor, media)
-                                        }
-                                    >
-                                        {t('articles.media.insert')}
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        size="icon"
-                                        variant="ghost"
-                                        className="size-7"
-                                        onClick={() => onEditMedia(media)}
-                                    >
-                                        <Pencil className="size-3.5" />
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        size="icon"
-                                        variant="ghost"
-                                        className="size-7 text-destructive"
-                                        onClick={() => void onDeleteMedia(media)}
-                                    >
-                                        <Trash2 className="size-3.5" />
-                                    </Button>
-                                </div>
+                                {canEdit && (
+                                    <div className="flex flex-wrap gap-1">
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="secondary"
+                                            className="h-7 px-2 text-xs"
+                                            disabled={!editor}
+                                            onClick={() =>
+                                                editor &&
+                                                insertArticleImage(
+                                                    editor,
+                                                    media,
+                                                )
+                                            }
+                                        >
+                                            {t('articles.media.insert')}
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            size="icon"
+                                            variant="ghost"
+                                            className="size-7"
+                                            onClick={() => onEditMedia(media)}
+                                        >
+                                            <Pencil className="size-3.5" />
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            size="icon"
+                                            variant="ghost"
+                                            className="size-7 text-destructive"
+                                            onClick={() =>
+                                                void onDeleteMedia(media)
+                                            }
+                                        >
+                                            <Trash2 className="size-3.5" />
+                                        </Button>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     );

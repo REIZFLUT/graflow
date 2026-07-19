@@ -84,8 +84,9 @@ return [
     ],
 
     'spellcheck' => [
-        'checking' => 'Checking…',
-        'not_run' => 'Not checked yet. Start a check from the toolbar.',
+        'start' => 'Start spell check',
+        'checking' => 'Spell check running',
+        'not_run' => 'Not checked yet.',
         'empty' => 'No issues found.',
         'empty_document' => 'No text available to check.',
         'no_issues' => 'No spelling or grammar issues found.',

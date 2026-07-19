@@ -33,7 +33,7 @@ class ArticleVersionFactory extends Factory
                     ],
                 ],
             ],
-            'status' => ArticleStatus::Draft,
+            'status' => ArticleStatus::Authoring,
             'created_by_id' => User::factory(),
             'created_at' => now(),
         ];

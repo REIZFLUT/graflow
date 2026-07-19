@@ -33,6 +33,15 @@ return [
         'in_use_publications' => 'This editor settings set is still assigned to publications.',
         'in_use_articles' => 'This editor settings set is still assigned to articles.',
     ],
+    'users' => [
+        'created' => 'User created.',
+        'saved' => 'User saved.',
+        'deleted' => 'User deleted.',
+        'cannot_delete_self' => 'You cannot delete your own account.',
+        'cannot_delete_last_admin' => 'The last administrator cannot be deleted.',
+        'cannot_demote_last_admin' => 'The last administrator cannot be demoted.',
+        'has_related_records' => 'This user cannot be deleted because related records still exist.',
+    ],
     'settings' => [
         'profile_updated' => 'Profile updated.',
         'password_updated' => 'Password updated.',

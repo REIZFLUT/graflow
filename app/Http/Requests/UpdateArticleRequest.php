@@ -2,16 +2,18 @@
 
 namespace App\Http\Requests;
 
-use App\Enums\ArticleStatus;
+use App\Models\Article;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class UpdateArticleRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user() !== null;
+        /** @var Article $article */
+        $article = $this->route('article');
+
+        return $this->user()?->can('updateContent', $article) ?? false;
     }
 
     /**
@@ -22,7 +24,6 @@ class UpdateArticleRequest extends FormRequest
         return [
             'title' => ['required', 'string', 'max:255'],
             'content' => ['required', 'array'],
-            'status' => ['required', Rule::enum(ArticleStatus::class)],
         ];
     }
 }

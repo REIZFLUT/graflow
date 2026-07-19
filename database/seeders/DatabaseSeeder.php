@@ -16,61 +16,28 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        User::factory()->create([
-            'name' => 'Administrator',
-            'email' => 'admin@example.com',
-            'password' => Hash::make('password'),
-            'role' => 'admin',
-        ]);
+        $users = [
+            ['name' => 'Administrator', 'email' => 'admin@example.com', 'role' => 'admin'],
+            ['name' => 'Produktmanager', 'email' => 'productmanager@example.com', 'role' => 'productmanager'],
+            ['name' => 'Editor', 'email' => 'editor@example.com', 'role' => 'editor'],
+            ['name' => 'Lektor', 'email' => 'lector@example.com', 'role' => 'lector'],
+            ['name' => 'Pia Maier', 'email' => 'pia.maier@example.com', 'role' => 'author'],
+            ['name' => 'Dr. Thomas Brenner', 'email' => 'thomas.brenner@example.com', 'role' => 'author'],
+            ['name' => 'Anna Schneider', 'email' => 'anna.schneider@example.com', 'role' => 'author'],
+            ['name' => 'Prof. Michael Weber', 'email' => 'michael.weber@example.com', 'role' => 'author'],
+            ['name' => 'Julia Hoffmann', 'email' => 'julia.hoffmann@example.com', 'role' => 'author'],
+        ];
 
-        User::factory()->create([
-            'name' => 'Produktmanager',
-            'email' => 'productmanager@example.com',
-            'password' => Hash::make('password'),
-            'role' => 'productmanager',
-        ]);
-
-        User::factory()->create([
-            'name' => 'Editor',
-            'email' => 'editor@example.com',
-            'password' => Hash::make('password'),
-            'role' => 'editor',
-        ]);
-
-        User::factory()->create([
-            'name' => 'Pia Maier',
-            'email' => 'pia.maier@example.com',
-            'password' => Hash::make('password'),
-            'role' => 'author',
-        ]);
-
-        User::factory()->create([
-            'name' => 'Dr. Thomas Brenner',
-            'email' => 'thomas.brenner@example.com',
-            'password' => Hash::make('password'),
-            'role' => 'author',
-        ]);
-
-        User::factory()->create([
-            'name' => 'Anna Schneider',
-            'email' => 'anna.schneider@example.com',
-            'password' => Hash::make('password'),
-            'role' => 'author',
-        ]);
-
-        User::factory()->create([
-            'name' => 'Prof. Michael Weber',
-            'email' => 'michael.weber@example.com',
-            'password' => Hash::make('password'),
-            'role' => 'author',
-        ]);
-
-        User::factory()->create([
-            'name' => 'Julia Hoffmann',
-            'email' => 'julia.hoffmann@example.com',
-            'password' => Hash::make('password'),
-            'role' => 'author',
-        ]);
+        foreach ($users as $user) {
+            User::query()->updateOrCreate(
+                ['email' => $user['email']],
+                [
+                    'name' => $user['name'],
+                    'password' => Hash::make('password'),
+                    'role' => $user['role'],
+                ],
+            );
+        }
 
         $this->call(DemoSeeder::class);
     }

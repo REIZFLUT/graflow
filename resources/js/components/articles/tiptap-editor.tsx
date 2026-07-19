@@ -1,9 +1,5 @@
 import { NodeSelection } from '@tiptap/pm/state';
-import {
-    EditorContent,
-    useEditor,
-    useEditorState,
-} from '@tiptap/react';
+import { EditorContent, useEditor, useEditorState } from '@tiptap/react';
 import type { Editor } from '@tiptap/react';
 import {
     Bold,
@@ -50,6 +46,7 @@ import type { TipTapDocument } from '@/types';
 type TipTapEditorProps = {
     content: TipTapDocument;
     onChange: (content: TipTapDocument) => void;
+    readOnly?: boolean;
     className?: string;
     variant?: 'default' | 'document';
     onEditorReady?: (editor: Editor) => void;
@@ -136,9 +133,9 @@ export function TipTapToolbar({
             const marginalBlock = getTopLevelBlockAtSelection(currentEditor);
             const paragraph = getParagraphAtSelection(currentEditor.state);
             const { empty } = currentEditor.state.selection;
-            const paragraphFormat = (paragraph?.node.attrs.paragraphFormat as
-                | string
-                | null) ?? null;
+            const paragraphFormat =
+                (paragraph?.node.attrs.paragraphFormat as string | null) ??
+                null;
             const activeCharacterFormat = characterFormats.find((format) =>
                 currentEditor.isActive('characterFormat', {
                     className: format.className,
@@ -156,7 +153,9 @@ export function TipTapToolbar({
                 orderedList: currentEditor.isActive('orderedList'),
                 blockquote: currentEditor.isActive('blockquote'),
                 hasMarginalBlock: marginalBlock !== null,
-                hasMarginalNote: Boolean(marginalBlock?.node.attrs.marginalNote),
+                hasMarginalNote: Boolean(
+                    marginalBlock?.node.attrs.marginalNote,
+                ),
                 hasTextSelection: !empty,
                 hasFootnote: currentEditor.isActive('footnote'),
                 hasSelectedArticleImage: currentEditor.isActive('articleImage'),
@@ -265,27 +264,21 @@ export function TipTapToolbar({
             <ToolbarButton
                 label={t('editor.toolbar.bullet_list')}
                 isActive={editorState.bulletList}
-                onClick={() =>
-                    editor.chain().focus().toggleBulletList().run()
-                }
+                onClick={() => editor.chain().focus().toggleBulletList().run()}
             >
                 <List className="size-4 stroke-[1.75]" />
             </ToolbarButton>
             <ToolbarButton
                 label={t('editor.toolbar.ordered_list')}
                 isActive={editorState.orderedList}
-                onClick={() =>
-                    editor.chain().focus().toggleOrderedList().run()
-                }
+                onClick={() => editor.chain().focus().toggleOrderedList().run()}
             >
                 <ListOrdered className="size-4 stroke-[1.75]" />
             </ToolbarButton>
             <ToolbarButton
                 label={t('editor.toolbar.blockquote')}
                 isActive={editorState.blockquote}
-                onClick={() =>
-                    editor.chain().focus().toggleBlockquote().run()
-                }
+                onClick={() => editor.chain().focus().toggleBlockquote().run()}
             >
                 <Quote className="size-4 stroke-[1.75]" />
             </ToolbarButton>
@@ -300,9 +293,7 @@ export function TipTapToolbar({
                 label={t('editor.toolbar.paragraph_formats')}
                 icon={<Pilcrow className="size-4 stroke-[1.75]" />}
                 formats={[normalParagraphFormat, ...paragraphFormats]}
-                activeId={
-                    editorState.activeParagraphFormat ?? NORMAL_FORMAT_ID
-                }
+                activeId={editorState.activeParagraphFormat ?? NORMAL_FORMAT_ID}
                 isActive={editorState.hasParagraphFormat}
                 onSelect={(formatId) => {
                     if (formatId === NORMAL_FORMAT_ID) {
@@ -441,6 +432,7 @@ export function TipTapToolbar({
 export default function TipTapEditor({
     content,
     onChange,
+    readOnly = false,
     className,
     variant = 'default',
     onEditorReady,
@@ -487,16 +479,10 @@ export default function TipTapEditor({
                 ? t('editor.placeholder.document')
                 : t('editor.placeholder.default'),
             onInlineMathClick: (node, pos) => {
-                onInlineMathClickRef.current?.(
-                    node.attrs.latex as string,
-                    pos,
-                );
+                onInlineMathClickRef.current?.(node.attrs.latex as string, pos);
             },
             onBlockMathClick: (node, pos) => {
-                onBlockMathClickRef.current?.(
-                    node.attrs.latex as string,
-                    pos,
-                );
+                onBlockMathClickRef.current?.(node.attrs.latex as string, pos);
             },
         });
         /* eslint-enable react-hooks/refs */
@@ -505,6 +491,7 @@ export default function TipTapEditor({
     const editor = useEditor({
         extensions,
         content,
+        editable: !readOnly,
         editorProps: {
             attributes: {
                 class: cn(
@@ -515,9 +502,9 @@ export default function TipTapEditor({
                 ),
             },
             handleClick: (_view, _pos, event) => {
-                const spellcheckElement = (
-                    event.target as HTMLElement
-                ).closest('.spellcheck-error');
+                const spellcheckElement = (event.target as HTMLElement).closest(
+                    '.spellcheck-error',
+                );
 
                 if (spellcheckElement) {
                     const matchId =
@@ -542,8 +529,7 @@ export default function TipTapEditor({
                     return false;
                 }
 
-                const footnoteId =
-                    markElement.getAttribute('data-footnote-id');
+                const footnoteId = markElement.getAttribute('data-footnote-id');
 
                 if (!footnoteId) {
                     return false;
@@ -626,6 +612,10 @@ export default function TipTapEditor({
             onEditorReady(editor);
         }
     }, [editor, onEditorReady]);
+
+    useEffect(() => {
+        editor?.setEditable(!readOnly);
+    }, [editor, readOnly]);
 
     useEffect(() => {
         if (!editor) {

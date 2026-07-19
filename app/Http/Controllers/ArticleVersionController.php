@@ -17,7 +17,7 @@ class ArticleVersionController extends Controller
 
     public function restore(Article $article, ArticleVersion $version): RedirectResponse
     {
-        $this->authorize('update', $article);
+        $this->authorize('updateContent', $article);
 
         abort_unless($version->article_id === $article->id, 404);
 

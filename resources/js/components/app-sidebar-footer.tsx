@@ -10,7 +10,7 @@ export function AppSidebarFooter() {
 
     return (
         <footer className="z-20 shrink-0 border-t border-border/40 bg-muted/15">
-            <div className="flex h-8 items-center px-6 md:px-4">
+            <div className="flex min-h-8 items-center px-6 py-1 md:px-4">
                 {statusBar}
             </div>
         </footer>

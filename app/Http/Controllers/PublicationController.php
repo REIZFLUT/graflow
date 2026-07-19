@@ -21,7 +21,12 @@ class PublicationController extends Controller
 
         $publications = Publication::query()
             ->visibleTo($user)
-            ->with(['owner:id,name'])
+            ->with([
+                'owner:id,name',
+                'issues' => fn ($query) => $query
+                    ->select(['id', 'publication_id', 'label'])
+                    ->orderByDesc('id'),
+            ])
             ->withCount('issues')
             ->latest()
             ->paginate(15)

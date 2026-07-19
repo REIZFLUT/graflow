@@ -38,7 +38,7 @@ class ArticlePdfController extends Controller
         StoreArticlePdfRequest $request,
         Article $article,
     ): RedirectResponse {
-        $this->authorize('view', $article);
+        $this->authorize('updateContent', $article);
 
         $pdf = $this->articlePdfService->storeGenerated(
             $article,

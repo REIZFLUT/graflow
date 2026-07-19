@@ -85,37 +85,42 @@ class ArticleCrudTest extends TestCase
     public function test_authenticated_users_can_view_articles_index(): void
     {
         $user = User::factory()->create();
+        $article = Article::factory()->create([
+            'owner_id' => $user->id,
+            'author_id' => $user->id,
+            'current_assignee_id' => $user->id,
+        ]);
 
         $this->actingAs($user)
             ->get(route('articles.index'))
-            ->assertOk();
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('articles.data.0.id', $article->id)
+                ->where('articles.data.0.author.name', $user->name)
+                ->where('articles.data.0.current_assignee.name', $user->name));
     }
 
-    public function test_authenticated_users_can_view_create_page(): void
+    public function test_product_managers_are_redirected_from_generic_create_page(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->productManager()->create();
 
         $this->actingAs($user)
             ->get(route('articles.create'))
-            ->assertOk();
+            ->assertRedirect(route('publications.index'));
     }
 
-    public function test_store_creates_article_and_redirects_to_edit(): void
+    public function test_generic_store_redirects_without_creating_an_article(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->productManager()->create();
 
-        $response = $this->actingAs($user)
+        $this->actingAs($user)
             ->post(route('articles.store'), [
                 'title' => 'My Article',
                 'content' => $this->tipTapContent(),
-            ]);
+            ])
+            ->assertRedirect(route('publications.index'));
 
-        $article = Article::query()->first();
-
-        $this->assertNotNull($article);
-        $response->assertRedirect(route('articles.edit', $article));
-        $this->assertSame('My Article', $article->title);
-        $this->assertSame($user->id, $article->owner_id);
+        $this->assertDatabaseEmpty('articles');
     }
 
     public function test_authenticated_users_can_view_edit_page_for_own_article(): void
@@ -161,7 +166,6 @@ class ArticleCrudTest extends TestCase
             ->put(route('articles.update', $article), [
                 'title' => 'Updated Title',
                 'content' => $this->tipTapContent('Updated'),
-                'status' => ArticleStatus::Draft->value,
             ])
             ->assertRedirect(route('articles.edit', $article));
 
@@ -171,11 +175,11 @@ class ArticleCrudTest extends TestCase
         $this->assertSame('Updated', $article->content['content'][0]['content'][0]['text']);
     }
 
-    public function test_update_persists_status_change(): void
+    public function test_update_does_not_change_workflow_status(): void
     {
         $user = User::factory()->create();
         $article = Article::factory()->for($user, 'owner')->create([
-            'status' => ArticleStatus::Draft,
+            'status' => ArticleStatus::Authoring,
         ]);
 
         $this->actingAs($user)
@@ -188,10 +192,10 @@ class ArticleCrudTest extends TestCase
 
         $article->refresh();
 
-        $this->assertSame(ArticleStatus::Published, $article->status);
+        $this->assertSame(ArticleStatus::Authoring, $article->status);
     }
 
-    public function test_update_rejects_invalid_status(): void
+    public function test_update_ignores_status_input(): void
     {
         $user = User::factory()->create();
         $article = Article::factory()->for($user, 'owner')->create();
@@ -202,24 +206,25 @@ class ArticleCrudTest extends TestCase
                 'content' => $this->tipTapContent(),
                 'status' => 'invalid-status',
             ])
-            ->assertSessionHasErrors('status');
+            ->assertRedirect(route('articles.edit', $article));
+
+        $this->assertSame(ArticleStatus::Authoring, $article->refresh()->status);
     }
 
-    public function test_store_persists_marginal_notes_and_footnotes(): void
+    public function test_update_persists_marginal_notes_and_footnotes(): void
     {
         $user = User::factory()->create();
+        $article = Article::factory()->for($user, 'owner')->create();
         $content = $this->tipTapContentWithMarginalNoteAndFootnote();
 
         $this->actingAs($user)
-            ->post(route('articles.store'), [
+            ->put(route('articles.update', $article), [
                 'title' => 'Article With Marginalia',
                 'content' => $content,
             ])
-            ->assertRedirect();
+            ->assertRedirect(route('articles.edit', $article));
 
-        $article = Article::query()->first();
-
-        $this->assertNotNull($article);
+        $article->refresh();
         $this->assertSame(
             'Erläuterung zur Überschrift',
             $article->content['content'][0]['attrs']['marginalNote'],
@@ -271,21 +276,20 @@ class ArticleCrudTest extends TestCase
         ];
     }
 
-    public function test_store_persists_superscript_and_subscript(): void
+    public function test_update_persists_superscript_and_subscript(): void
     {
         $user = User::factory()->create();
+        $article = Article::factory()->for($user, 'owner')->create();
         $content = $this->tipTapContentWithSuperscriptAndSubscript();
 
         $this->actingAs($user)
-            ->post(route('articles.store'), [
+            ->put(route('articles.update', $article), [
                 'title' => 'Article With Script Marks',
                 'content' => $content,
             ])
-            ->assertRedirect();
+            ->assertRedirect(route('articles.edit', $article));
 
-        $article = Article::query()->first();
-
-        $this->assertNotNull($article);
+        $article->refresh();
         $this->assertSame(
             'subscript',
             $article->content['content'][0]['content'][1]['marks'][0]['type'],
@@ -328,21 +332,20 @@ class ArticleCrudTest extends TestCase
         ];
     }
 
-    public function test_store_persists_inline_and_block_math(): void
+    public function test_update_persists_inline_and_block_math(): void
     {
         $user = User::factory()->create();
+        $article = Article::factory()->for($user, 'owner')->create();
         $content = $this->tipTapContentWithMath();
 
         $this->actingAs($user)
-            ->post(route('articles.store'), [
+            ->put(route('articles.update', $article), [
                 'title' => 'Article With Math',
                 'content' => $content,
             ])
-            ->assertRedirect();
+            ->assertRedirect(route('articles.edit', $article));
 
-        $article = Article::query()->first();
-
-        $this->assertNotNull($article);
+        $article->refresh();
         $this->assertSame(
             'inlineMath',
             $article->content['content'][0]['content'][1]['type'],
@@ -432,21 +435,20 @@ class ArticleCrudTest extends TestCase
         ];
     }
 
-    public function test_store_persists_tables(): void
+    public function test_update_persists_tables(): void
     {
         $user = User::factory()->create();
+        $article = Article::factory()->for($user, 'owner')->create();
         $content = $this->tipTapContentWithTable();
 
         $this->actingAs($user)
-            ->post(route('articles.store'), [
+            ->put(route('articles.update', $article), [
                 'title' => 'Article With Table',
                 'content' => $content,
             ])
-            ->assertRedirect();
+            ->assertRedirect(route('articles.edit', $article));
 
-        $article = Article::query()->first();
-
-        $this->assertNotNull($article);
+        $article->refresh();
         $this->assertSame('table', $article->content['content'][0]['type']);
         $this->assertSame(
             'tableHeader',
@@ -504,7 +506,6 @@ class ArticleCrudTest extends TestCase
             ->put(route('articles.update', $article), [
                 'title' => 'Whitespace Around Footnote',
                 'content' => $content,
-                'status' => ArticleStatus::Draft->value,
             ])
             ->assertRedirect(route('articles.edit', $article));
 
@@ -531,7 +532,6 @@ class ArticleCrudTest extends TestCase
             ->put(route('articles.update', $article), [
                 'title' => 'Updated With Marginalia',
                 'content' => $content,
-                'status' => ArticleStatus::Draft->value,
             ])
             ->assertRedirect(route('articles.edit', $article));
 
@@ -605,21 +605,20 @@ class ArticleCrudTest extends TestCase
         ];
     }
 
-    public function test_store_persists_special_formats_and_block_elements(): void
+    public function test_update_persists_special_formats_and_block_elements(): void
     {
         $user = User::factory()->create();
+        $article = Article::factory()->for($user, 'owner')->create();
         $content = $this->tipTapContentWithSpecialFormats();
 
         $this->actingAs($user)
-            ->post(route('articles.store'), [
+            ->put(route('articles.update', $article), [
                 'title' => 'Article With Special Formats',
                 'content' => $content,
             ])
-            ->assertRedirect();
+            ->assertRedirect(route('articles.edit', $article));
 
-        $article = Article::query()->first();
-
-        $this->assertNotNull($article);
+        $article->refresh();
         $this->assertSame(
             'autorenkommentar',
             $article->content['content'][0]['attrs']['paragraphFormat'],

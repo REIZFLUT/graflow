@@ -1,7 +1,8 @@
-import { Form } from '@inertiajs/react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Form, Link } from '@inertiajs/react';
+import { CalendarRange, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import PublicationIssueController from '@/actions/App/Http/Controllers/PublicationIssueController';
+import { show as showPlanning } from '@/actions/App/Http/Controllers/PublicationIssuePlanningController';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import {
@@ -88,7 +89,9 @@ export default function PublicationIssuesManager({
                             <Input
                                 id="new-issue-label"
                                 name="label"
-                                placeholder={t('publications.issues.placeholder')}
+                                placeholder={t(
+                                    'publications.issues.placeholder',
+                                )}
                                 required
                             />
                             <InputError message={errors.label} />
@@ -169,45 +172,61 @@ function IssueRow({
                 )}
             </td>
             <td className="px-4 py-3 text-right">
-                <Dialog>
-                    <DialogTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                            <Trash2 className="size-4" />
-                            {t('publications.issues.delete')}
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogTitle>
-                            {t('publications.issues.delete_title')}
-                        </DialogTitle>
-                        <DialogDescription>
-                            {t('publications.issues.delete_description')}
-                        </DialogDescription>
-                        <DialogFooter className="gap-2">
-                            <DialogClose asChild>
-                                <Button variant="outline">
-                                    {t('publications.issues.cancel')}
-                                </Button>
-                            </DialogClose>
-                            <Form
-                                {...PublicationIssueController.destroy.form({
-                                    publication: publication.id,
-                                    issue: issue.id,
-                                })}
-                            >
-                                {({ processing }) => (
-                                    <Button
-                                        type="submit"
-                                        variant="destructive"
-                                        disabled={processing}
-                                    >
-                                        {t('publications.issues.delete')}
+                <div className="flex justify-end gap-1">
+                    <Button variant="outline" size="sm" asChild>
+                        <Link
+                            href={showPlanning({
+                                publication: publication.id,
+                                issue: issue.id,
+                            })}
+                            prefetch
+                        >
+                            <CalendarRange className="size-4" />
+                            {t('publications.issues.planning')}
+                        </Link>
+                    </Button>
+                    <Dialog>
+                        <DialogTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                                <Trash2 className="size-4" />
+                                {t('publications.issues.delete')}
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogTitle>
+                                {t('publications.issues.delete_title')}
+                            </DialogTitle>
+                            <DialogDescription>
+                                {t('publications.issues.delete_description')}
+                            </DialogDescription>
+                            <DialogFooter className="gap-2">
+                                <DialogClose asChild>
+                                    <Button variant="outline">
+                                        {t('publications.issues.cancel')}
                                     </Button>
-                                )}
-                            </Form>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
+                                </DialogClose>
+                                <Form
+                                    {...PublicationIssueController.destroy.form(
+                                        {
+                                            publication: publication.id,
+                                            issue: issue.id,
+                                        },
+                                    )}
+                                >
+                                    {({ processing }) => (
+                                        <Button
+                                            type="submit"
+                                            variant="destructive"
+                                            disabled={processing}
+                                        >
+                                            {t('publications.issues.delete')}
+                                        </Button>
+                                    )}
+                                </Form>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                </div>
             </td>
         </tr>
     );

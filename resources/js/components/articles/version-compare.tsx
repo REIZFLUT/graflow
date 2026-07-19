@@ -20,7 +20,7 @@ import {
 import { cn } from '@/lib/utils';
 import { buildSideBySideDiff, sideBySideHasChanges } from '@/lib/version-diff';
 import type { DiffSegment, SideBySideRow } from '@/lib/version-diff';
-import type { ArticleVersion } from '@/types';
+import type { ArticleStatus, ArticleVersion } from '@/types';
 
 type VersionCompareProps = {
     versions: ArticleVersion[];
@@ -36,10 +36,24 @@ type DiffSection = 'title' | 'content';
 
 function findLatestByStatus(
     versions: ArticleVersion[],
-    status: string,
+    status: ArticleStatus,
 ): ArticleVersion | undefined {
     return versions
         .filter((version) => version.status === status)
+        .reduce<ArticleVersion | undefined>((latest, version) => {
+            if (!latest || version.version_number > latest.version_number) {
+                return version;
+            }
+
+            return latest;
+        }, undefined);
+}
+
+function findLatestUnpublished(
+    versions: ArticleVersion[],
+): ArticleVersion | undefined {
+    return versions
+        .filter((version) => version.status !== 'published')
         .reduce<ArticleVersion | undefined>((latest, version) => {
             if (!latest || version.version_number > latest.version_number) {
                 return version;
@@ -236,8 +250,8 @@ export default function VersionCompare({
         (version) => version.id === compareId,
     );
 
-    const latestDraft = useMemo(
-        () => findLatestByStatus(versions, 'draft'),
+    const latestUnpublished = useMemo(
+        () => findLatestUnpublished(versions),
         [versions],
     );
     const latestPublished = useMemo(
@@ -321,14 +335,14 @@ export default function VersionCompare({
         );
     }
 
-    const canQuickCompare = Boolean(latestDraft && latestPublished);
+    const canQuickCompare = Boolean(latestUnpublished && latestPublished);
 
     const applyQuickCompare = () => {
-        if (!latestDraft || !latestPublished) {
+        if (!latestUnpublished || !latestPublished) {
             return;
         }
 
-        onBaseChange(latestDraft.id);
+        onBaseChange(latestUnpublished.id);
         onCompareChange(latestPublished.id);
     };
 
@@ -344,13 +358,13 @@ export default function VersionCompare({
                     size="sm"
                     onClick={applyQuickCompare}
                     disabled={!canQuickCompare}
-                    data-test="quick-compare-draft-published"
+                    data-test="quick-compare-workflow-published"
                 >
-                    {t('articles.versions.quick_draft_vs_published')}
+                    {t('articles.versions.quick_workflow_vs_published')}
                 </Button>
-                {!latestDraft && (
+                {!latestUnpublished && (
                     <p className="mt-2 text-xs text-muted-foreground">
-                        {t('articles.versions.no_draft')}
+                        {t('articles.versions.no_unpublished')}
                     </p>
                 )}
                 {!latestPublished && (

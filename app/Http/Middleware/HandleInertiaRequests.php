@@ -46,6 +46,7 @@ class HandleInertiaRequests extends Middleware
             ],
             'can' => [
                 'manageEditorSettingsSets' => fn (): bool => $request->user()?->canManageEditorSettingsSets() ?? false,
+                'manageUsers' => fn (): bool => $request->user()?->canManageUsers() ?? false,
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];

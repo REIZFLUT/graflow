@@ -1,27 +1,90 @@
 import type { JSONContent } from '@tiptap/core';
 import type { EditorSettingsSet } from './editor-settings-set';
-import type { PublicationCategory, PublicationIssue } from './publication';
+import type {
+    PublicationCategory,
+    PublicationChapter,
+    PublicationIssue,
+} from './publication';
 
 export type TipTapDocument = JSONContent;
 
 export type TipTapNode = JSONContent;
+
+export type ArticleStatus =
+    | 'planned'
+    | 'authoring'
+    | 'manuscript_submitted'
+    | 'product_manager_correction'
+    | 'revision_requested'
+    | 'revision'
+    | 'editorial_work'
+    | 'ready_for_publication'
+    | 'published';
+
+export type ArticleWorkflowAction =
+    | 'submit_manuscript'
+    | 'complete_editorial_work'
+    | 'force_status'
+    | 'request_revision'
+    | 'assign_author'
+    | 'assign_editorial'
+    | 'recall'
+    | 'mark_ready'
+    | 'publish'
+    | 'start_product_manager_correction'
+    | 'complete_product_manager_correction';
+
+export type ArticleCapabilities = {
+    update_content: boolean;
+    submit_manuscript: boolean;
+    complete_editorial_work: boolean;
+    force_status: boolean;
+    request_revision: boolean;
+    manage_workflow: boolean;
+    delete: boolean;
+};
+
+export type ArticleWorkflowUserRole = 'author' | 'editor' | 'lector';
+
+export type ArticleWorkflowUser = {
+    id: number;
+    name: string;
+    role: ArticleWorkflowUserRole;
+};
 
 export type Article = {
     id: number;
     title: string;
     content: TipTapDocument | null;
     owner_id: number;
-    status: string;
+    product_manager_id: number | null;
+    author_id: number | null;
+    current_assignee_id: number | null;
+    status: ArticleStatus;
     publication_issue_id: number | null;
+    publication_chapter_id: number | null;
+    position: number;
     editor_settings_set_id: number | null;
+    submission_deadline: string | null;
+    target_character_count: number | null;
+    current_character_count?: number;
+    published_at: string | null;
     metadata: Record<string, unknown> | null;
     created_at: string;
     updated_at: string;
+    author?: ArticleUser | null;
+    current_assignee?: ArticleUser | null;
     publication_issue?: PublicationIssue | null;
+    publication_chapter?: PublicationChapter | null;
     editorSettingsSet?: EditorSettingsSet | null;
     publication_categories?: PublicationCategory[];
     versions?: ArticleVersion[];
     media?: ArticleMedia[];
+};
+
+export type ArticleUser = {
+    id: number;
+    name: string;
 };
 
 export type ArticleMedia = {
@@ -48,13 +111,23 @@ export type ArticleVersion = {
     version_number: number;
     title: string;
     content: TipTapDocument | null;
-    status: string | null;
+    status: ArticleStatus | null;
     created_by_id: number;
     created_at: string;
     created_by?: {
         id: number;
         name: string;
     };
+};
+
+export type ArticleWorkflowEvent = {
+    id: number;
+    from_status: ArticleStatus | null;
+    to_status: ArticleStatus;
+    reason: string | null;
+    created_at: string;
+    actor: ArticleUser;
+    assignee: ArticleUser | null;
 };
 
 export type ArticlePdf = {

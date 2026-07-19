@@ -84,8 +84,9 @@ return [
     ],
 
     'spellcheck' => [
-        'checking' => 'Prüfung läuft…',
-        'not_run' => 'Noch nicht geprüft. Starte die Prüfung über die Toolbar.',
+        'start' => 'Rechtschreibprüfung starten',
+        'checking' => 'Rechtschreibprüfung läuft',
+        'not_run' => 'Noch nicht geprüft.',
         'empty' => 'Keine Fehler gefunden.',
         'empty_document' => 'Kein Text zum Prüfen vorhanden.',
         'no_issues' => 'Keine Rechtschreib- oder Grammatikfehler gefunden.',

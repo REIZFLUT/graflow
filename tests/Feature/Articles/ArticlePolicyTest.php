@@ -35,7 +35,6 @@ class ArticlePolicyTest extends TestCase
                     'type' => 'doc',
                     'content' => [],
                 ],
-                'status' => 'draft',
             ])
             ->assertForbidden();
     }

@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\UserRole;
 use App\Models\Publication;
 use App\Models\User;
 
@@ -14,7 +15,8 @@ class PublicationPolicy
 
     public function view(User $user, Publication $publication): bool
     {
-        return $user->id === $publication->owner_id
+        return $user->role === UserRole::Admin
+            || $user->id === $publication->owner_id
             || $publication->isContributedToBy($user);
     }
 
@@ -25,11 +27,12 @@ class PublicationPolicy
 
     public function update(User $user, Publication $publication): bool
     {
-        return $user->id === $publication->owner_id;
+        return $user->role === UserRole::Admin
+            || $user->id === $publication->owner_id;
     }
 
     public function delete(User $user, Publication $publication): bool
     {
-        return $user->id === $publication->owner_id;
+        return $this->update($user, $publication);
     }
 }

@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { FileText, LayoutGrid, Newspaper, SlidersHorizontal } from 'lucide-react';
+import { FileText, LayoutGrid, Newspaper, SlidersHorizontal, Users } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -17,6 +17,7 @@ import { dashboard } from '@/routes';
 import { index as articlesIndex } from '@/routes/articles';
 import { index as editorSettingsSetsIndex } from '@/routes/editor-settings-sets';
 import { index as publicationsIndex } from '@/routes/publications';
+import { index as usersIndex } from '@/routes/users';
 import type { NavItem } from '@/types';
 
 export function AppSidebar() {
@@ -45,6 +46,15 @@ export function AppSidebar() {
                       title: t('nav.editor_settings'),
                       href: editorSettingsSetsIndex(),
                       icon: SlidersHorizontal,
+                  },
+              ]
+            : []),
+        ...(can.manageUsers
+            ? [
+                  {
+                      title: t('nav.users'),
+                      href: usersIndex(),
+                      icon: Users,
                   },
               ]
             : []),

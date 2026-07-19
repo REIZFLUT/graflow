@@ -5,6 +5,7 @@ return [
     'articles' => 'Artikel',
     'publications' => 'Publikationen',
     'editor_settings' => 'Editor-Einstellungen',
+    'users' => 'Benutzer',
     'settings' => 'Einstellungen',
     'log_out' => 'Abmelden',
     'profile' => 'Profil',

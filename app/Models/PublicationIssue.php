@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Database\Factories\PublicationIssueFactory;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,7 +17,8 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Publication $publication
- * @property-read \Illuminate\Database\Eloquent\Collection<int, Article> $articles
+ * @property-read Collection<int, Article> $articles
+ * @property-read Collection<int, PublicationChapter> $chapters
  */
 class PublicationIssue extends Model
 {
@@ -44,6 +46,16 @@ class PublicationIssue extends Model
      */
     public function articles(): HasMany
     {
-        return $this->hasMany(Article::class);
+        return $this->hasMany(Article::class)
+            ->orderBy('position')
+            ->orderBy('id');
+    }
+
+    /**
+     * @return HasMany<PublicationChapter, $this>
+     */
+    public function chapters(): HasMany
+    {
+        return $this->hasMany(PublicationChapter::class)->orderBy('position');
     }
 }

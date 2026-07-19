@@ -18,15 +18,30 @@ use Illuminate\Support\Facades\Storage;
  * @property string $title
  * @property array<string, mixed>|null $content
  * @property int $owner_id
+ * @property int|null $product_manager_id
+ * @property int|null $author_id
+ * @property int|null $current_assignee_id
  * @property ArticleStatus $status
  * @property int|null $publication_issue_id
+ * @property int|null $publication_chapter_id
+ * @property int $position
  * @property int|null $editor_settings_set_id
+ * @property Carbon|null $submission_deadline
+ * @property int|null $target_character_count
+ * @property Carbon|null $published_at
  * @property array<string, mixed>|null $metadata
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read User $owner
+ * @property-read User|null $productManager
+ * @property-read User|null $author
+ * @property-read User|null $currentAssignee
  * @property-read PublicationIssue|null $publicationIssue
+ * @property-read PublicationChapter|null $publicationChapter
  * @property-read Collection<int, PublicationCategory> $publicationCategories
+ * @property-read Collection<int, ArticleParticipant> $participants
+ * @property-read Collection<int, User> $participantUsers
+ * @property-read Collection<int, ArticleWorkflowEvent> $workflowEvents
  * @property-read Collection<int, ArticleVersion> $versions
  * @property-read Collection<int, ArticleMedia> $media
  * @property-read Collection<int, ArticlePdf> $pdfs
@@ -43,9 +58,17 @@ class Article extends Model
         'title',
         'content',
         'owner_id',
+        'product_manager_id',
+        'author_id',
+        'current_assignee_id',
         'status',
         'publication_issue_id',
+        'publication_chapter_id',
+        'position',
         'editor_settings_set_id',
+        'submission_deadline',
+        'target_character_count',
+        'published_at',
         'metadata',
     ];
 
@@ -57,6 +80,10 @@ class Article extends Model
         return [
             'content' => 'array',
             'status' => ArticleStatus::class,
+            'position' => 'integer',
+            'submission_deadline' => 'datetime',
+            'target_character_count' => 'integer',
+            'published_at' => 'datetime',
             'metadata' => 'array',
         ];
     }
@@ -67,6 +94,30 @@ class Article extends Model
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_id');
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function productManager(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'product_manager_id');
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function author(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'author_id');
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function currentAssignee(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'current_assignee_id');
     }
 
     /**
@@ -102,6 +153,14 @@ class Article extends Model
     }
 
     /**
+     * @return BelongsTo<PublicationChapter, $this>
+     */
+    public function publicationChapter(): BelongsTo
+    {
+        return $this->belongsTo(PublicationChapter::class);
+    }
+
+    /**
      * @return BelongsTo<EditorSettingsSet, $this>
      */
     public function editorSettingsSet(): BelongsTo
@@ -115,6 +174,32 @@ class Article extends Model
     public function publicationCategories(): BelongsToMany
     {
         return $this->belongsToMany(PublicationCategory::class);
+    }
+
+    /**
+     * @return HasMany<ArticleParticipant, $this>
+     */
+    public function participants(): HasMany
+    {
+        return $this->hasMany(ArticleParticipant::class);
+    }
+
+    /**
+     * @return BelongsToMany<User, $this>
+     */
+    public function participantUsers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'article_participants')
+            ->withPivot('process_role')
+            ->withTimestamps();
+    }
+
+    /**
+     * @return HasMany<ArticleWorkflowEvent, $this>
+     */
+    public function workflowEvents(): HasMany
+    {
+        return $this->hasMany(ArticleWorkflowEvent::class);
     }
 
     protected static function booted(): void

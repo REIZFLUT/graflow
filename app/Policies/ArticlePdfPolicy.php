@@ -9,16 +9,16 @@ class ArticlePdfPolicy
 {
     public function view(User $user, ArticlePdf $articlePdf): bool
     {
-        return $user->id === $articlePdf->owner_id;
+        return $user->can('view', $articlePdf->article);
     }
 
     public function update(User $user, ArticlePdf $articlePdf): bool
     {
-        return $user->id === $articlePdf->owner_id;
+        return $user->can('updateContent', $articlePdf->article);
     }
 
     public function delete(User $user, ArticlePdf $articlePdf): bool
     {
-        return $user->id === $articlePdf->owner_id;
+        return $user->can('manageWorkflow', $articlePdf->article);
     }
 }

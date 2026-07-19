@@ -15,6 +15,7 @@ type PageProps = {
     publications: Publication[];
     editorSettingsSets: EditorSettingsSet[];
     defaultEditorSettingsSet: EditorSettingsSet | null;
+    canEdit: boolean;
 };
 
 export default function ArticlesMetadata({
@@ -22,15 +23,20 @@ export default function ArticlesMetadata({
     publications,
     editorSettingsSets,
     defaultEditorSettingsSet,
+    canEdit,
 }: PageProps) {
     const { t } = useTranslation();
 
     const { data, setData, patch, processing, errors } = useForm<{
         publication_issue_id: number | null;
+        publication_chapter_id: number | null;
+        position: number;
         publication_category_ids: number[];
         editor_settings_set_id: number | null;
     }>({
         publication_issue_id: article.publication_issue_id,
+        publication_chapter_id: article.publication_chapter_id,
+        position: article.position,
         publication_category_ids:
             article.publication_categories?.map((category) => category.id) ??
             [],
@@ -59,19 +65,21 @@ export default function ArticlesMetadata({
                         </Button>
                     </div>
 
-                    <Button
-                        type="submit"
-                        form="article-metadata-form"
-                        size="sm"
-                        disabled={processing}
-                    >
-                        {processing ? (
-                            <Spinner className="size-4" />
-                        ) : (
-                            <Save className="size-4" />
-                        )}
-                        {t('common.save')}
-                    </Button>
+                    {canEdit && (
+                        <Button
+                            type="submit"
+                            form="article-metadata-form"
+                            size="sm"
+                            disabled={processing}
+                        >
+                            {processing ? (
+                                <Spinner className="size-4" />
+                            ) : (
+                                <Save className="size-4" />
+                            )}
+                            {t('common.save')}
+                        </Button>
+                    )}
                 </div>
 
                 <Heading
@@ -83,6 +91,11 @@ export default function ArticlesMetadata({
                     id="article-metadata-form"
                     onSubmit={(event) => {
                         event.preventDefault();
+
+                        if (!canEdit) {
+                            return;
+                        }
+
                         patch(
                             ArticleMetadataController.update.url({
                                 article: article.id,
@@ -99,6 +112,14 @@ export default function ArticlesMetadata({
                         onPublicationIssueIdChange={(issueId) =>
                             setData('publication_issue_id', issueId)
                         }
+                        publicationChapterId={data.publication_chapter_id}
+                        onPublicationChapterIdChange={(chapterId) =>
+                            setData('publication_chapter_id', chapterId)
+                        }
+                        position={data.position}
+                        onPositionChange={(position) =>
+                            setData('position', position)
+                        }
                         publicationCategoryIds={data.publication_category_ids}
                         onPublicationCategoryIdsChange={(categoryIds) =>
                             setData('publication_category_ids', categoryIds)
@@ -110,6 +131,7 @@ export default function ArticlesMetadata({
                         }
                         defaultEditorSettingsSet={defaultEditorSettingsSet}
                         errors={errors}
+                        readOnly={!canEdit}
                     />
                 </form>
             </div>
@@ -117,14 +139,19 @@ export default function ArticlesMetadata({
     );
 }
 
-ArticlesMetadata.layout = (props: { translations: Record<string, unknown> }) => ({
+ArticlesMetadata.layout = (props: {
+    translations: Record<string, unknown>;
+}) => ({
     breadcrumbs: [
         {
             title: translate(props.translations, 'nav.articles'),
             href: index(),
         },
         {
-            title: translate(props.translations, 'articles.metadata.breadcrumb'),
+            title: translate(
+                props.translations,
+                'articles.metadata.breadcrumb',
+            ),
             href: index(),
         },
     ],

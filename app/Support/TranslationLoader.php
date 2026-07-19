@@ -16,6 +16,7 @@ class TranslationLoader
         'articles',
         'publications',
         'editor',
+        'users',
         'messages',
     ];
 

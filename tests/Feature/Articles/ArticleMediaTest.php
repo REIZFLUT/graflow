@@ -4,7 +4,11 @@ namespace Tests\Feature\Articles;
 
 use App\Models\Article;
 use App\Models\ArticleMedia;
+use App\Models\Publication;
+use App\Models\PublicationIssue;
 use App\Models\User;
+use App\Services\ArticleMediaService;
+use App\Services\ArticleWorkflowService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -175,9 +179,12 @@ class ArticleMediaTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_article_store_claims_staging_media(): void
+    public function test_workflow_planned_article_can_claim_staging_media(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->author()->create();
+        $productManager = User::factory()->productManager()->create();
+        $publication = Publication::factory()->for($productManager, 'owner')->create();
+        $issue = PublicationIssue::factory()->for($publication)->create();
         $stagingToken = (string) Str::uuid();
 
         $upload = $this->actingAs($user)->postJson(route('articles.media.staging.store'), [
@@ -193,15 +200,21 @@ class ArticleMediaTest extends TestCase
 
         Storage::disk('local')->assertExists($stagingMedia->original_path);
 
-        $response = $this->actingAs($user)->post(route('articles.store'), [
-            'title' => 'Artikel mit Bild',
-            'content' => $this->tipTapContentWithImage($mediaId),
-            'staging_token' => $stagingToken,
-        ]);
+        $workflow = app(ArticleWorkflowService::class);
+        $article = $workflow->plan(
+            $productManager,
+            $issue,
+            'Artikel mit Bild',
+            $user,
+            null,
+            1,
+            now()->addWeek()->toDateString(),
+            5000,
+        );
+        $article = $workflow->assignAuthor($article, $productManager, $user);
+        $article->update(['content' => $this->tipTapContentWithImage($mediaId)]);
 
-        $response->assertRedirect();
-
-        $article = Article::query()->where('title', 'Artikel mit Bild')->firstOrFail();
+        app(ArticleMediaService::class)->claimStagingMedia($article, $stagingToken, $user);
 
         $this->assertDatabaseHas('article_media', [
             'id' => $mediaId,
@@ -307,8 +320,11 @@ class ArticleMediaTest extends TestCase
 
     public function test_deleting_article_removes_media_storage_directory(): void
     {
-        $user = User::factory()->create();
-        $article = Article::factory()->for($user, 'owner')->create();
+        $user = User::factory()->author()->create();
+        $productManager = User::factory()->productManager()->create();
+        $article = Article::factory()->for($user, 'owner')->create([
+            'product_manager_id' => $productManager->id,
+        ]);
 
         $upload = $this->actingAs($user)->postJson(route('articles.media.store', $article), [
             'file' => $this->makeTestImage(),
@@ -319,7 +335,7 @@ class ArticleMediaTest extends TestCase
         $media = ArticleMedia::query()->findOrFail($upload->json('data.id'));
         Storage::disk('local')->assertExists($media->original_path);
 
-        $this->actingAs($user)
+        $this->actingAs($productManager)
             ->delete(route('articles.destroy', $article))
             ->assertRedirect(route('articles.index'));
 

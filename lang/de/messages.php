@@ -33,6 +33,15 @@ return [
         'in_use_publications' => 'Dieses Set wird noch von Publikationen verwendet.',
         'in_use_articles' => 'Dieses Set wird noch von Artikeln verwendet.',
     ],
+    'users' => [
+        'created' => 'Benutzer erstellt.',
+        'saved' => 'Benutzer gespeichert.',
+        'deleted' => 'Benutzer gelöscht.',
+        'cannot_delete_self' => 'Du kannst dein eigenes Konto nicht löschen.',
+        'cannot_delete_last_admin' => 'Der letzte Administrator kann nicht gelöscht werden.',
+        'cannot_demote_last_admin' => 'Der letzte Administrator kann nicht herabgestuft werden.',
+        'has_related_records' => 'Dieser Benutzer kann nicht gelöscht werden, weil noch verknüpfte Datensätze existieren.',
+    ],
     'settings' => [
         'profile_updated' => 'Profil aktualisiert.',
         'password_updated' => 'Passwort aktualisiert.',

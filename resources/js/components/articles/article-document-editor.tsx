@@ -3,18 +3,17 @@ import type { Editor } from '@tiptap/react';
 import {
     ArrowLeft,
     FileText,
-    History,
     Image,
     Save,
     SquareAsterisk,
     Tags,
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import { toast } from 'sonner';
+import ArticleEditorFooter from '@/components/articles/article-editor-footer';
 import ArticleImageDialog from '@/components/articles/article-image-dialog';
 import ArticleMediaPanel from '@/components/articles/article-media-panel';
-import ArticleStatusSelect from '@/components/articles/article-status-select';
-import DocumentStatusBar from '@/components/articles/document-status-bar';
 import FootnoteDialog from '@/components/articles/footnote-dialog';
 import FootnotesPanel from '@/components/articles/footnotes-panel';
 import MarginalNotesColumn from '@/components/articles/marginal-notes-column';
@@ -30,6 +29,7 @@ import TipTapEditor, {
 } from '@/components/articles/tiptap-editor';
 import VersionCompare from '@/components/articles/version-compare';
 import VersionHistory from '@/components/articles/version-history';
+import WorkflowHistoryPanel from '@/components/articles/workflow-history-panel';
 import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -39,7 +39,6 @@ import {
     SheetDescription,
     SheetHeader,
     SheetTitle,
-    SheetTrigger,
 } from '@/components/ui/sheet';
 import { Spinner } from '@/components/ui/spinner';
 import { useArticleEditorChrome } from '@/contexts/article-editor-chrome-context';
@@ -48,7 +47,6 @@ import { useSpellCheck } from '@/hooks/use-spell-check';
 import { useTranslation } from '@/hooks/use-translation';
 import { generateArticlePdfBlob } from '@/lib/article-pdf/generate';
 import { getArticleStatusLabel } from '@/lib/article-status';
-import type { ArticleStatusValue } from '@/lib/article-status';
 import { combineDocumentText, getDocumentStats } from '@/lib/document-stats';
 import {
     deleteSelectedArticleImage,
@@ -70,7 +68,10 @@ import { edit as metadataEdit } from '@/routes/articles/metadata';
 import { store as storeArticlePdf } from '@/routes/articles/pdfs';
 import type {
     ArticleMedia,
+    ArticleStatus,
+    ArticleUser,
     ArticleVersion,
+    ArticleWorkflowEvent,
     PublicationEditorSettings,
     TipTapDocument,
 } from '@/types';
@@ -81,17 +82,22 @@ type ArticleDocumentEditorProps = {
     editorSettings: PublicationEditorSettings;
     onTitleChange: (title: string) => void;
     onContentChange: (content: TipTapDocument) => void;
-    onSubmit: () => void;
+    onSubmit: (content: TipTapDocument) => void;
     processing: boolean;
     errors: {
         title?: string;
         content?: string;
-        status?: string;
     };
-    status?: string;
-    onStatusChange?: (status: ArticleStatusValue) => void;
+    status?: ArticleStatus;
+    readOnly?: boolean;
+    canManageMetadata?: boolean;
+    workflowActions?: ReactNode;
     articleId?: number;
+    currentAssignee?: ArticleUser | null;
+    submissionDeadline?: string | null;
+    targetCharacterCount?: number | null;
     versions?: ArticleVersion[];
+    workflowEvents?: ArticleWorkflowEvent[];
     mediaItems?: ArticleMedia[];
     mediaUploading?: boolean;
     onMediaUpload?: (
@@ -114,10 +120,16 @@ export default function ArticleDocumentEditor({
     onSubmit,
     processing,
     errors,
-    status = 'draft',
-    onStatusChange,
+    status,
+    readOnly = false,
+    canManageMetadata = false,
+    workflowActions = null,
     articleId,
+    currentAssignee = null,
+    submissionDeadline = null,
+    targetCharacterCount = null,
     versions = [],
+    workflowEvents = [],
     mediaItems = [],
     mediaUploading = false,
     onMediaUpload,
@@ -171,6 +183,8 @@ export default function ArticleDocumentEditor({
         'history',
     );
     const [versionSheetOpen, setVersionSheetOpen] = useState(false);
+    const [workflowHistorySheetOpen, setWorkflowHistorySheetOpen] =
+        useState(false);
     const [compareBaseId, setCompareBaseId] = useState<number | null>(
         () => versions[1]?.id ?? null,
     );
@@ -438,8 +452,18 @@ export default function ArticleDocumentEditor({
         closeSpellCheckPopover();
         setSpellCheckSheetOpen(true);
 
+        if (!hasRun) {
+            await runCheck(editor);
+        }
+    }, [closeSpellCheckPopover, editor, hasRun, isChecking, runCheck]);
+
+    const handleStartSpellCheck = useCallback(async () => {
+        if (!editor || isChecking) {
+            return;
+        }
+
         await runCheck(editor);
-    }, [closeSpellCheckPopover, editor, isChecking, runCheck]);
+    }, [editor, isChecking, runCheck]);
 
     const handleSpellCheckSheetOpenChange = (open: boolean) => {
         setSpellCheckSheetOpen(open);
@@ -589,17 +613,13 @@ export default function ArticleDocumentEditor({
                         </Link>
                     </Button>
 
-                    {onStatusChange ? (
-                        <ArticleStatusSelect
-                            value={status}
-                            onChange={onStatusChange}
-                            disabled={processing}
-                        />
-                    ) : (
+                    {status && (
                         <Badge variant="secondary">
                             {getArticleStatusLabel(status, t)}
                         </Badge>
                     )}
+
+                    {workflowActions}
 
                     <Button
                         variant="ghost"
@@ -637,7 +657,7 @@ export default function ArticleDocumentEditor({
                         )}
                     </Button>
 
-                    {articleId !== undefined && (
+                    {articleId !== undefined && !readOnly && (
                         <Button
                             variant="ghost"
                             size="sm"
@@ -712,7 +732,7 @@ export default function ArticleDocumentEditor({
                         </Button>
                     )}
 
-                    {articleId !== undefined && (
+                    {articleId !== undefined && canManageMetadata && (
                         <Button variant="ghost" size="sm" asChild>
                             <Link
                                 href={metadataEdit({ article: articleId })}
@@ -724,115 +744,21 @@ export default function ArticleDocumentEditor({
                         </Button>
                     )}
 
-                    {articleId !== undefined && (
-                        <Sheet
-                            open={versionSheetOpen}
-                            onOpenChange={setVersionSheetOpen}
+                    {!readOnly && (
+                        <Button
+                            type="submit"
+                            form="article-document-form"
+                            size="sm"
+                            disabled={processing}
                         >
-                            <SheetTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                    <History className="size-4" />
-                                    {t('articles.editor.versions')}
-                                    {versions.length > 0 && (
-                                        <Badge
-                                            variant="secondary"
-                                            className="ml-1 h-5 min-w-5 px-1"
-                                        >
-                                            {versions.length}
-                                        </Badge>
-                                    )}
-                                </Button>
-                            </SheetTrigger>
-                            <SheetContent
-                                className={cn(
-                                    'w-full',
-                                    versionView === 'compare'
-                                        ? 'sm:max-w-4xl'
-                                        : 'sm:max-w-md',
-                                )}
-                            >
-                                <SheetHeader className="border-b border-border/60 pb-4">
-                                    <SheetTitle>
-                                        {t('articles.editor.versions')}
-                                    </SheetTitle>
-                                    <SheetDescription>
-                                        {versionView === 'compare'
-                                            ? t(
-                                                  'articles.versions.compare_hint',
-                                              )
-                                            : t(
-                                                  'articles.editor.versions_sheet',
-                                              )}
-                                    </SheetDescription>
-                                </SheetHeader>
-                                <div className="overflow-y-auto px-4 pb-6">
-                                    <div className="flex gap-1 pt-4">
-                                        <Button
-                                            type="button"
-                                            variant={
-                                                versionView === 'history'
-                                                    ? 'secondary'
-                                                    : 'ghost'
-                                            }
-                                            size="sm"
-                                            onClick={() =>
-                                                setVersionView('history')
-                                            }
-                                        >
-                                            {t('articles.versions.history')}
-                                        </Button>
-                                        <Button
-                                            type="button"
-                                            variant={
-                                                versionView === 'compare'
-                                                    ? 'secondary'
-                                                    : 'ghost'
-                                            }
-                                            size="sm"
-                                            onClick={() =>
-                                                setVersionView('compare')
-                                            }
-                                        >
-                                            {t('articles.versions.compare')}
-                                        </Button>
-                                    </div>
-                                    {versionView === 'history' ? (
-                                        <VersionHistory
-                                            articleId={articleId}
-                                            versions={versions}
-                                            variant="compact"
-                                        />
-                                    ) : (
-                                        <VersionCompare
-                                            versions={versions}
-                                            editor={editor}
-                                            baseId={compareBaseId}
-                                            compareId={compareTargetId}
-                                            onBaseChange={setCompareBaseId}
-                                            onCompareChange={setCompareTargetId}
-                                            onNavigateToEditor={() =>
-                                                setVersionSheetOpen(false)
-                                            }
-                                        />
-                                    )}
-                                </div>
-                            </SheetContent>
-                        </Sheet>
+                            {processing ? (
+                                <Spinner className="size-4" />
+                            ) : (
+                                <Save className="size-4" />
+                            )}
+                            {t('articles.editor.save')}
+                        </Button>
                     )}
-
-                    <Button
-                        type="submit"
-                        form="article-document-form"
-                        size="sm"
-                        disabled={processing}
-                    >
-                        {processing ? (
-                            <Spinner className="size-4" />
-                        ) : (
-                            <Save className="size-4" />
-                        )}
-                        {t('articles.editor.save')}
-                    </Button>
                 </>
             ),
         });
@@ -847,12 +773,9 @@ export default function ArticleDocumentEditor({
         processing,
         setChrome,
         status,
-        onStatusChange,
-        versions,
-        versionView,
-        versionSheetOpen,
-        compareBaseId,
-        compareTargetId,
+        workflowActions,
+        readOnly,
+        canManageMetadata,
         t,
         locale,
         title,
@@ -875,9 +798,18 @@ export default function ArticleDocumentEditor({
 
             setChrome({
                 statusBar: (
-                    <DocumentStatusBar
+                    <ArticleEditorFooter
                         words={stats.words}
                         letters={stats.letters}
+                        articleId={articleId}
+                        currentAssignee={currentAssignee}
+                        submissionDeadline={submissionDeadline}
+                        targetCharacterCount={targetCharacterCount}
+                        versionsCount={versions.length}
+                        onHistoryClick={() =>
+                            setWorkflowHistorySheetOpen(true)
+                        }
+                        onVersionsClick={() => setVersionSheetOpen(true)}
                     />
                 ),
             });
@@ -890,10 +822,19 @@ export default function ArticleDocumentEditor({
         return () => {
             editor.off('update', syncDocumentStats);
         };
-    }, [editor, setChrome, title, t]);
+    }, [
+        articleId,
+        currentAssignee,
+        editor,
+        setChrome,
+        submissionDeadline,
+        targetCharacterCount,
+        title,
+        versions.length,
+    ]);
 
     useEffect(() => {
-        if (!editor) {
+        if (!editor || readOnly) {
             setChrome({ toolbar: null });
 
             return;
@@ -925,6 +866,7 @@ export default function ArticleDocumentEditor({
         openFootnoteDialog,
         openImageUploadDialog,
         openMathDialogForCreate,
+        readOnly,
         setChrome,
     ]);
 
@@ -953,11 +895,15 @@ export default function ArticleDocumentEditor({
     const handleSubmit = (event: React.FormEvent) => {
         event.preventDefault();
 
-        if (editor) {
-            onContentChange(editor.getJSON() as TipTapDocument);
+        if (readOnly) {
+            return;
         }
 
-        onSubmit();
+        const latestContent =
+            (editor?.getJSON() as TipTapDocument | undefined) ?? content;
+
+        onContentChange(latestContent);
+        onSubmit(latestContent);
     };
 
     return (
@@ -987,7 +933,11 @@ export default function ArticleDocumentEditor({
                             }
                             placeholder={t('articles.editor.title_placeholder')}
                             required
-                            className="mb-8 w-full border-0 bg-transparent text-3xl font-bold tracking-tight text-foreground placeholder:text-muted-foreground/50 focus:outline-none md:text-4xl"
+                            readOnly={readOnly}
+                            className={cn(
+                                'mb-8 w-full border-0 bg-transparent text-3xl font-bold tracking-tight text-foreground placeholder:text-muted-foreground/50 focus:outline-none md:text-4xl',
+                                readOnly && 'cursor-default',
+                            )}
                         />
                         <InputError className="mb-4" message={errors.title} />
 
@@ -1002,23 +952,43 @@ export default function ArticleDocumentEditor({
                                 variant="document"
                                 content={content}
                                 onChange={onContentChange}
+                                readOnly={readOnly}
                                 onEditorReady={setEditor}
                                 onFootnoteMarkClick={openFootnotesSheet}
                                 onSpellCheckMarkClick={
                                     handleSpellCheckMarkClick
                                 }
                                 onArticleImageDoubleClick={
-                                    openImageEditDialogFromMediaId
+                                    readOnly
+                                        ? undefined
+                                        : openImageEditDialogFromMediaId
                                 }
-                                onInlineMathClick={(latex, pos) =>
-                                    openMathDialogForEdit('inline', latex, pos)
+                                onInlineMathClick={
+                                    readOnly
+                                        ? undefined
+                                        : (latex, pos) =>
+                                              openMathDialogForEdit(
+                                                  'inline',
+                                                  latex,
+                                                  pos,
+                                              )
                                 }
-                                onBlockMathClick={(latex, pos) =>
-                                    openMathDialogForEdit('block', latex, pos)
+                                onBlockMathClick={
+                                    readOnly
+                                        ? undefined
+                                        : (latex, pos) =>
+                                              openMathDialogForEdit(
+                                                  'block',
+                                                  latex,
+                                                  pos,
+                                              )
                                 }
                             />
                             {editor && editorSettings.has_marginal_column && (
-                                <MarginalNotesColumn editor={editor} />
+                                <MarginalNotesColumn
+                                    editor={editor}
+                                    readOnly={readOnly}
+                                />
                             )}
                         </div>
                         <InputError className="mt-4" message={errors.content} />
@@ -1026,29 +996,35 @@ export default function ArticleDocumentEditor({
                 </div>
             </form>
 
-            <FootnoteDialog
-                open={footnoteDialogOpen}
-                onOpenChange={handleFootnoteDialogOpenChange}
-                value={footnoteText}
-                onChange={setFootnoteText}
-                onSave={saveFootnote}
-                onRemove={
-                    footnoteMode === 'edit' ? removeEditingFootnote : undefined
-                }
-                excerpt={footnoteExcerpt}
-                mode={footnoteMode}
-            />
+            {!readOnly && (
+                <>
+                    <FootnoteDialog
+                        open={footnoteDialogOpen}
+                        onOpenChange={handleFootnoteDialogOpenChange}
+                        value={footnoteText}
+                        onChange={setFootnoteText}
+                        onSave={saveFootnote}
+                        onRemove={
+                            footnoteMode === 'edit'
+                                ? removeEditingFootnote
+                                : undefined
+                        }
+                        excerpt={footnoteExcerpt}
+                        mode={footnoteMode}
+                    />
 
-            <MathDialog
-                open={mathDialogOpen}
-                onOpenChange={handleMathDialogOpenChange}
-                value={mathLatex}
-                onChange={setMathLatex}
-                onSave={saveMath}
-                onRemove={mathMode === 'edit' ? removeMath : undefined}
-                variant={mathVariant}
-                mode={mathMode}
-            />
+                    <MathDialog
+                        open={mathDialogOpen}
+                        onOpenChange={handleMathDialogOpenChange}
+                        value={mathLatex}
+                        onChange={setMathLatex}
+                        onSave={saveMath}
+                        onRemove={mathMode === 'edit' ? removeMath : undefined}
+                        variant={mathVariant}
+                        mode={mathMode}
+                    />
+                </>
+            )}
 
             <Sheet
                 open={footnotesSheetOpen}
@@ -1072,6 +1048,7 @@ export default function ArticleDocumentEditor({
                                 setFocusedFootnoteId(footnote.id)
                             }
                             focusedFootnoteId={focusedFootnoteId}
+                            canEdit={!readOnly}
                         />
                     </div>
                 </SheetContent>
@@ -1097,6 +1074,9 @@ export default function ArticleDocumentEditor({
                             isChecking={isChecking}
                             focusedMatchId={focusedSpellCheckMatchId}
                             onFocusMatch={handleFocusSpellCheckMatch}
+                            onStartCheck={() => {
+                                void handleStartSpellCheck();
+                            }}
                         />
                     </div>
                 </SheetContent>
@@ -1110,15 +1090,17 @@ export default function ArticleDocumentEditor({
                 onFocusMatch={handleFocusSpellCheckMatch}
             />
 
-            <ArticleImageDialog
-                open={imageDialogOpen}
-                onOpenChange={setImageDialogOpen}
-                mode={imageDialogMode}
-                media={editingMedia}
-                uploading={mediaUploading}
-                onUpload={handleImageUpload}
-                onSave={handleImageMetadataSave}
-            />
+            {!readOnly && (
+                <ArticleImageDialog
+                    open={imageDialogOpen}
+                    onOpenChange={setImageDialogOpen}
+                    mode={imageDialogMode}
+                    media={editingMedia}
+                    uploading={mediaUploading}
+                    onUpload={handleImageUpload}
+                    onSave={handleImageMetadataSave}
+                />
+            )}
 
             <Sheet open={mediaSheetOpen} onOpenChange={setMediaSheetOpen}>
                 <SheetContent className="w-full sm:max-w-md">
@@ -1136,10 +1118,105 @@ export default function ArticleDocumentEditor({
                             onEditMedia={openImageEditDialog}
                             onDeleteMedia={handleMediaDelete}
                             getUsedMediaIds={getUsedMediaIds}
+                            canEdit={!readOnly}
                         />
                     </div>
                 </SheetContent>
             </Sheet>
+
+            <Sheet
+                open={workflowHistorySheetOpen}
+                onOpenChange={setWorkflowHistorySheetOpen}
+            >
+                <SheetContent className="w-full sm:max-w-md">
+                    <SheetHeader className="border-b border-border/60 pb-4">
+                        <SheetTitle>
+                            {t('articles.editor.history')}
+                        </SheetTitle>
+                        <SheetDescription>
+                            {t('articles.editor.history_sheet')}
+                        </SheetDescription>
+                    </SheetHeader>
+                    <div className="overflow-y-auto px-4 pt-4 pb-6">
+                        <WorkflowHistoryPanel events={workflowEvents} />
+                    </div>
+                </SheetContent>
+            </Sheet>
+
+            {articleId !== undefined && (
+                <Sheet
+                    open={versionSheetOpen}
+                    onOpenChange={setVersionSheetOpen}
+                >
+                    <SheetContent
+                        className={cn(
+                            'w-full',
+                            versionView === 'compare'
+                                ? 'sm:max-w-4xl'
+                                : 'sm:max-w-md',
+                        )}
+                    >
+                        <SheetHeader className="border-b border-border/60 pb-4">
+                            <SheetTitle>
+                                {t('articles.editor.versions')}
+                            </SheetTitle>
+                            <SheetDescription>
+                                {versionView === 'compare'
+                                    ? t('articles.versions.compare_hint')
+                                    : t('articles.editor.versions_sheet')}
+                            </SheetDescription>
+                        </SheetHeader>
+                        <div className="overflow-y-auto px-4 pb-6">
+                            <div className="flex gap-1 pt-4">
+                                <Button
+                                    type="button"
+                                    variant={
+                                        versionView === 'history'
+                                            ? 'secondary'
+                                            : 'ghost'
+                                    }
+                                    size="sm"
+                                    onClick={() => setVersionView('history')}
+                                >
+                                    {t('articles.versions.history')}
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant={
+                                        versionView === 'compare'
+                                            ? 'secondary'
+                                            : 'ghost'
+                                    }
+                                    size="sm"
+                                    onClick={() => setVersionView('compare')}
+                                >
+                                    {t('articles.versions.compare')}
+                                </Button>
+                            </div>
+                            {versionView === 'history' ? (
+                                <VersionHistory
+                                    articleId={articleId}
+                                    versions={versions}
+                                    variant="compact"
+                                    canRestore={!readOnly}
+                                />
+                            ) : (
+                                <VersionCompare
+                                    versions={versions}
+                                    editor={editor}
+                                    baseId={compareBaseId}
+                                    compareId={compareTargetId}
+                                    onBaseChange={setCompareBaseId}
+                                    onCompareChange={setCompareTargetId}
+                                    onNavigateToEditor={() =>
+                                        setVersionSheetOpen(false)
+                                    }
+                                />
+                            )}
+                        </div>
+                    </SheetContent>
+                </Sheet>
+            )}
         </>
     );
 }
