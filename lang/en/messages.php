@@ -10,6 +10,10 @@ return [
         'version_restored' => 'Version restored.',
         'pdf_generated' => 'PDF generated.',
         'pdf_annotated_saved' => 'Annotated PDF saved.',
+        'comment_added' => 'Comment added.',
+        'comment_replied' => 'Reply added.',
+        'comment_resolved' => 'Comment resolved.',
+        'comment_reopened' => 'Comment reopened.',
     ],
     'publications' => [
         'created' => 'Publication created.',

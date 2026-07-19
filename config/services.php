@@ -36,8 +36,12 @@ return [
     ],
 
     'languagetool' => [
+        'driver' => env('LANGUAGETOOL_DRIVER', 'local'),
         'url' => env('LANGUAGETOOL_URL', 'http://host.docker.internal:8011'),
         'token' => env('LANGUAGETOOL_API_TOKEN'),
+        'api_url' => env('LANGUAGETOOL_API_URL', 'https://api.languagetoolplus.com'),
+        'username' => env('LANGUAGETOOL_API_USERNAME'),
+        'api_key' => env('LANGUAGETOOL_API_KEY'),
     ],
 
 ];

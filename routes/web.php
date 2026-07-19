@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ArticleCommentController;
 use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\ArticleMediaController;
 use App\Http\Controllers\ArticleMetadataController;
@@ -37,6 +38,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('articles.metadata.update');
     Route::post('articles/{article}/versions/{version}/restore', [ArticleVersionController::class, 'restore'])
         ->name('articles.versions.restore');
+    Route::prefix('articles/{article}/comments')->name('articles.comments.')->group(function () {
+        Route::post('/', [ArticleCommentController::class, 'store'])->name('store');
+        Route::post('threads/{thread}', [ArticleCommentController::class, 'reply'])->name('reply');
+        Route::patch('threads/{thread}/resolve', [ArticleCommentController::class, 'resolve'])->name('resolve');
+        Route::patch('threads/{thread}/reopen', [ArticleCommentController::class, 'reopen'])->name('reopen');
+    });
     Route::prefix('articles/{article}/workflow')->name('articles.workflow.')->group(function () {
         Route::post('assign-author', [ArticleWorkflowController::class, 'assignAuthor'])
             ->name('assign-author');

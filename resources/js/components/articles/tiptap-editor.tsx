@@ -12,6 +12,7 @@ import {
     LayoutPanelTop,
     List,
     ListOrdered,
+    MessageSquarePlus,
     Pilcrow,
     Quote,
     Sigma,
@@ -51,6 +52,7 @@ type TipTapEditorProps = {
     variant?: 'default' | 'document';
     onEditorReady?: (editor: Editor) => void;
     onFootnoteMarkClick?: (footnoteId: string) => void;
+    onCommentMarkClick?: (threadId: string) => void;
     onSpellCheckMarkClick?: (matchId: string, rect: DOMRect) => void;
     onArticleImageSelect?: (mediaId: string) => void;
     onArticleImageDoubleClick?: (mediaId: string) => void;
@@ -97,6 +99,8 @@ export function TipTapToolbar({
     editor,
     showMarginalNotes = true,
     onFootnoteClick,
+    onCommentClick,
+    canComment = false,
     onImageClick,
     onRemoveArticleImage,
     onInlineMathClick,
@@ -107,6 +111,8 @@ export function TipTapToolbar({
     editor: Editor;
     showMarginalNotes?: boolean;
     onFootnoteClick?: () => void;
+    onCommentClick?: () => void;
+    canComment?: boolean;
     onImageClick?: () => void;
     onRemoveArticleImage?: () => void;
     onInlineMathClick?: () => void;
@@ -158,6 +164,7 @@ export function TipTapToolbar({
                 ),
                 hasTextSelection: !empty,
                 hasFootnote: currentEditor.isActive('footnote'),
+                hasComment: currentEditor.isActive('comment'),
                 hasSelectedArticleImage: currentEditor.isActive('articleImage'),
                 activeParagraphFormat: paragraphFormat,
                 hasParagraphFormat: paragraphFormat !== null,
@@ -394,6 +401,16 @@ export function TipTapToolbar({
             >
                 <SquareAsterisk className="size-4 stroke-[1.75]" />
             </ToolbarButton>
+            {canComment && (
+                <ToolbarButton
+                    label={t('editor.toolbar.comment')}
+                    isActive={editorState.hasComment}
+                    disabled={!editorState.hasTextSelection}
+                    onClick={() => onCommentClick?.()}
+                >
+                    <MessageSquarePlus className="size-4 stroke-[1.75]" />
+                </ToolbarButton>
+            )}
             <ToolbarButton
                 label={t('editor.toolbar.image')}
                 onClick={() => onImageClick?.()}
@@ -437,6 +454,7 @@ export default function TipTapEditor({
     variant = 'default',
     onEditorReady,
     onFootnoteMarkClick,
+    onCommentMarkClick,
     onSpellCheckMarkClick,
     onArticleImageSelect,
     onArticleImageDoubleClick,
@@ -446,6 +464,7 @@ export default function TipTapEditor({
     const { t } = useTranslation();
     const isDocument = variant === 'document';
     const onFootnoteMarkClickRef = useRef(onFootnoteMarkClick);
+    const onCommentMarkClickRef = useRef(onCommentMarkClick);
     const onSpellCheckMarkClickRef = useRef(onSpellCheckMarkClick);
     const onArticleImageSelectRef = useRef(onArticleImageSelect);
     const onArticleImageDoubleClickRef = useRef(onArticleImageDoubleClick);
@@ -457,6 +476,7 @@ export default function TipTapEditor({
 
     useEffect(() => {
         onFootnoteMarkClickRef.current = onFootnoteMarkClick;
+        onCommentMarkClickRef.current = onCommentMarkClick;
         onSpellCheckMarkClickRef.current = onSpellCheckMarkClick;
         onArticleImageSelectRef.current = onArticleImageSelect;
         onArticleImageDoubleClickRef.current = onArticleImageDoubleClick;
@@ -466,6 +486,7 @@ export default function TipTapEditor({
         onArticleImageDoubleClick,
         onArticleImageSelect,
         onBlockMathClick,
+        onCommentMarkClick,
         onFootnoteMarkClick,
         onInlineMathClick,
         onSpellCheckMarkClick,
@@ -516,6 +537,23 @@ export default function TipTapEditor({
                             matchId,
                             spellcheckElement.getBoundingClientRect(),
                         );
+
+                        return true;
+                    }
+                }
+
+                const commentElement = (event.target as HTMLElement).closest(
+                    '.article-comment-mark',
+                );
+
+                if (commentElement) {
+                    const threadId = commentElement.getAttribute(
+                        'data-comment-thread-id',
+                    );
+
+                    if (threadId) {
+                        event.preventDefault();
+                        onCommentMarkClickRef.current?.(threadId);
 
                         return true;
                     }

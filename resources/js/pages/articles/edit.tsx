@@ -9,6 +9,7 @@ import { emptyTipTapDocument } from '@/types';
 import type {
     Article,
     ArticleCapabilities,
+    ArticleCommentThread,
     ArticleWorkflowAction,
     ArticleWorkflowEvent,
     ArticleWorkflowUser,
@@ -22,6 +23,7 @@ type PageProps = {
     capabilities: ArticleCapabilities;
     allowedActions: ArticleWorkflowAction[];
     workflowEvents: ArticleWorkflowEvent[];
+    commentThreads: ArticleCommentThread[];
     authors?: ArticleWorkflowUser[];
     editorialStaff?: ArticleWorkflowUser[];
 };
@@ -32,6 +34,7 @@ export default function ArticlesEdit({
     capabilities,
     allowedActions,
     workflowEvents,
+    commentThreads,
     authors = [],
     editorialStaff = [],
 }: PageProps) {
@@ -84,6 +87,8 @@ export default function ArticlesEdit({
                 targetCharacterCount={article.target_character_count}
                 versions={article.versions ?? []}
                 workflowEvents={workflowEvents}
+                commentThreads={commentThreads}
+                canComment={capabilities.comment}
                 mediaItems={mediaItems}
                 mediaUploading={uploading}
                 onMediaUpload={capabilities.update_content ? upload : undefined}

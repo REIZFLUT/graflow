@@ -10,6 +10,10 @@ return [
         'version_restored' => 'Version wiederhergestellt.',
         'pdf_generated' => 'PDF erzeugt.',
         'pdf_annotated_saved' => 'Annotiertes PDF gespeichert.',
+        'comment_added' => 'Kommentar hinzugefügt.',
+        'comment_replied' => 'Antwort hinzugefügt.',
+        'comment_resolved' => 'Kommentar als erledigt markiert.',
+        'comment_reopened' => 'Kommentar wieder geöffnet.',
     ],
     'publications' => [
         'created' => 'Publikation erstellt.',

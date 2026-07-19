@@ -487,6 +487,38 @@
         margin-left: 0.02em;
     }
 
+    .article-document-body .article-prose .article-comment-mark {
+        cursor: pointer;
+        border-radius: 0.125rem;
+        transition: background-color 0.2s ease;
+    }
+
+    .article-document-body .article-prose .article-comment-mark--visible {
+        background-color: rgb(250 204 21 / 0.28);
+        border-radius: 0.125rem;
+    }
+
+    .article-document-body
+        .article-prose
+        .article-comment-mark--visible:hover {
+        background-color: rgb(250 204 21 / 0.45);
+    }
+
+    .article-document-body .article-prose .article-comment-mark--active {
+        background-color: rgb(251 146 60 / 0.55);
+        border-radius: 0.125rem;
+    }
+
+    .article-document-body .article-prose .article-comment-mark--resolved {
+        text-decoration: underline;
+        text-decoration-style: dotted;
+        text-decoration-color: color-mix(
+            in oklab,
+            var(--muted-foreground) 50%,
+            transparent
+        );
+    }
+
     .article-document-body .article-prose .article-image {
         margin: 1.75rem 0;
         cursor: pointer;

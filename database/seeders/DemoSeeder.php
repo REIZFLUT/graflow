@@ -195,6 +195,16 @@ class DemoSeeder extends Seeder
 
             $article->update(['content' => $content]);
 
+            $this->seedComments(
+                $article,
+                $articleData['sections'],
+                $articleIndex,
+                $content,
+                $author,
+                $editorialAssignee,
+                $productManager,
+            );
+
             $categoryName = $articleData['category'];
             $categoryKey = $publication->id.'-'.$categoryName;
 
@@ -370,6 +380,250 @@ class DemoSeeder extends Seeder
                 ],
             );
         }
+    }
+
+    /**
+     * Seed a few comment threads (with replies and resolved states) on selected
+     * articles and anchor them in the article content via `comment` marks so the
+     * commenting feature is demonstrated out of the box.
+     *
+     * @param  list<array{type: string, level?: int, text: string, marginal_note?: string|null}>  $sections
+     * @param  array<string, mixed>  $content
+     */
+    private function seedComments(
+        Article $article,
+        array $sections,
+        int $articleIndex,
+        array $content,
+        User $author,
+        User $editorialAssignee,
+        User $productManager,
+    ): void {
+        $plans = $this->commentPlans($articleIndex, $author, $editorialAssignee, $productManager);
+
+        if ($plans === []) {
+            return;
+        }
+
+        $bodyTexts = $this->bodyParagraphTexts($sections);
+        $changed = false;
+
+        foreach ($plans as $planIndex => $plan) {
+            if (! isset($bodyTexts[$plan['paragraph_index']])) {
+                continue;
+            }
+
+            $fullText = $bodyTexts[$plan['paragraph_index']];
+            $phrase = $this->anchorPhrase($fullText);
+            $creator = $plan['comments'][0][0];
+
+            $commentBase = Carbon::parse('2026-06-20 09:00:00')
+                ->addDays($articleIndex)
+                ->addHours($planIndex * 2);
+
+            $resolvedBy = $plan['resolved_by'];
+            $resolvedAt = $resolvedBy !== null
+                ? $commentBase->copy()->addMinutes(count($plan['comments']) * 30 + 15)
+                : null;
+
+            $thread = $article->commentThreads()->firstOrCreate(
+                [
+                    'created_by_id' => $creator->id,
+                    'anchor_text' => $phrase,
+                ],
+                [
+                    'resolved_at' => $resolvedAt,
+                    'resolved_by_id' => $resolvedBy?->id,
+                ],
+            );
+
+            if ($thread->comments()->doesntExist()) {
+                foreach ($plan['comments'] as $commentIndex => [$user, $body]) {
+                    $createdAt = $commentBase->copy()->addMinutes($commentIndex * 30);
+
+                    $comment = $thread->comments()->make([
+                        'user_id' => $user->id,
+                        'body' => $body,
+                    ]);
+                    $comment->created_at = $createdAt;
+                    $comment->updated_at = $createdAt;
+                    $comment->save();
+                }
+            }
+
+            $anchor = '';
+            $applied = false;
+            $content = $this->markNodeByText($content, $fullText, $thread->id, $anchor, $applied)[0];
+
+            if ($applied) {
+                $changed = true;
+            }
+        }
+
+        if ($changed) {
+            $article->update(['content' => $content]);
+        }
+    }
+
+    /**
+     * @return list<array{
+     *     paragraph_index: int,
+     *     resolved_by: User|null,
+     *     comments: list<array{0: User, 1: string}>
+     * }>
+     */
+    private function commentPlans(
+        int $articleIndex,
+        User $author,
+        User $editorialAssignee,
+        User $productManager,
+    ): array {
+        return match ($articleIndex) {
+            5 => [
+                [
+                    'paragraph_index' => 1,
+                    'resolved_by' => null,
+                    'comments' => [
+                        [$editorialAssignee, 'Bitte hier eine belastbare Quelle für diese Aussage ergänzen.'],
+                        [$author, 'Danke für den Hinweis – ich ergänze die Quelle im nächsten Absatz.'],
+                    ],
+                ],
+                [
+                    'paragraph_index' => 6,
+                    'resolved_by' => $editorialAssignee,
+                    'comments' => [
+                        [$editorialAssignee, 'Die Formulierung wirkt etwas umgangssprachlich, bitte sachlicher fassen.'],
+                        [$author, 'Erledigt, der Absatz ist jetzt neutraler formuliert.'],
+                    ],
+                ],
+            ],
+            8 => [
+                [
+                    'paragraph_index' => 2,
+                    'resolved_by' => null,
+                    'comments' => [
+                        [$editorialAssignee, 'Können wir diesen Absatz kürzen? Er wiederholt den vorherigen Gedanken.'],
+                        [$author, 'Guter Punkt, ich schaue mir das in der nächsten Überarbeitung an.'],
+                        [$editorialAssignee, 'Perfekt, danke dir!'],
+                    ],
+                ],
+            ],
+            12 => [
+                [
+                    'paragraph_index' => 1,
+                    'resolved_by' => null,
+                    'comments' => [
+                        [$productManager, 'Hier fehlt noch der Bezug zur aktuellen GEG-Novelle.'],
+                    ],
+                ],
+            ],
+            default => [],
+        };
+    }
+
+    /**
+     * Collect the body paragraph texts of an article in reading order.
+     *
+     * @param  list<array{type: string, level?: int, text: string, marginal_note?: string|null}>  $sections
+     * @return list<string>
+     */
+    private function bodyParagraphTexts(array $sections): array
+    {
+        $texts = [];
+
+        foreach ($sections as $section) {
+            if (($section['type'] ?? null) === 'paragraph' && isset($section['text'])) {
+                $texts[] = (string) $section['text'];
+            }
+        }
+
+        return $texts;
+    }
+
+    private function anchorPhrase(string $text): string
+    {
+        $words = preg_split('/\s+/u', trim($text), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        return implode(' ', array_slice($words, 0, 6));
+    }
+
+    /**
+     * Find the text node whose text matches `$fullText` and wrap its opening
+     * phrase in a `comment` mark that references the given thread.
+     *
+     * @param  array<string, mixed>  $node
+     * @return list<array<string, mixed>>
+     */
+    private function markNodeByText(
+        array $node,
+        string $fullText,
+        string $threadId,
+        string &$anchor,
+        bool &$applied,
+    ): array {
+        if (! $applied && ($node['type'] ?? null) === 'text' && ($node['text'] ?? null) === $fullText) {
+            $applied = true;
+            $anchor = $this->anchorPhrase($fullText);
+
+            return $this->splitTextNodeWithMark($node, $anchor, $threadId);
+        }
+
+        if (isset($node['content']) && is_array($node['content'])) {
+            $children = [];
+
+            foreach ($node['content'] as $child) {
+                if (is_array($child)) {
+                    foreach ($this->markNodeByText($child, $fullText, $threadId, $anchor, $applied) as $piece) {
+                        $children[] = $piece;
+                    }
+                } else {
+                    $children[] = $child;
+                }
+            }
+
+            $node['content'] = $children;
+        }
+
+        return [$node];
+    }
+
+    /**
+     * @param  array<string, mixed>  $node
+     * @return list<array<string, mixed>>
+     */
+    private function splitTextNodeWithMark(array $node, string $phrase, string $threadId): array
+    {
+        $text = (string) $node['text'];
+        /** @var list<array<string, mixed>> $marks */
+        $marks = $node['marks'] ?? [];
+        $after = mb_substr($text, mb_strlen($phrase));
+
+        $commentMark = ['type' => 'comment', 'attrs' => ['threadId' => $threadId]];
+
+        $pieces = [
+            $this->makeTextNode($phrase, array_merge($marks, [$commentMark])),
+        ];
+
+        if ($after !== '') {
+            $pieces[] = $this->makeTextNode($after, $marks);
+        }
+
+        return $pieces;
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $marks
+     * @return array<string, mixed>
+     */
+    private function makeTextNode(string $text, array $marks): array
+    {
+        $node = ['type' => 'text', 'text' => $text];
+
+        if ($marks !== []) {
+            $node['marks'] = array_values($marks);
+        }
+
+        return $node;
     }
 
     /**

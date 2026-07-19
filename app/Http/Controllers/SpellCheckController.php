@@ -12,23 +12,24 @@ class SpellCheckController extends Controller
 {
     public function check(SpellCheckRequest $request): JsonResponse
     {
-        $payload = $request->payload();
-        $baseUrl = rtrim((string) config('services.languagetool.url'), '/');
-        $token = (string) config('services.languagetool.token');
+        $connection = $this->resolveConnection();
 
-        if ($baseUrl === '' || $token === '') {
+        if ($connection === null) {
             return response()->json([
                 'message' => 'LanguageTool is not configured.',
+                'reason' => 'not_configured',
             ], 503);
         }
 
+        $payload = array_merge($request->payload(), $connection['params']);
+
         try {
-            $response = Http::withToken($token)
+            $response = Http::withHeaders($connection['headers'])
                 ->asForm()
                 ->acceptJson()
                 ->connectTimeout(5)
                 ->timeout(120)
-                ->post("{$baseUrl}/v2/check", $payload);
+                ->post("{$connection['base_url']}/v2/check", $payload);
         } catch (ConnectionException $exception) {
             Log::warning('LanguageTool connection failed.', [
                 'message' => $exception->getMessage(),
@@ -36,6 +37,7 @@ class SpellCheckController extends Controller
 
             return response()->json([
                 'message' => 'LanguageTool is unavailable.',
+                'reason' => 'unavailable',
             ], 503);
         }
 
@@ -47,6 +49,7 @@ class SpellCheckController extends Controller
 
             return response()->json([
                 'message' => 'LanguageTool check failed.',
+                'reason' => 'failed',
             ], 502);
         }
 
@@ -60,6 +63,52 @@ class SpellCheckController extends Controller
                 $matches,
             ),
         ]);
+    }
+
+    /**
+     * Resolve the active LanguageTool connection based on the configured driver.
+     *
+     * Returns null when the selected driver is missing required credentials.
+     *
+     * @return array{base_url: string, headers: array<string, string>, params: array<string, string>}|null
+     */
+    private function resolveConnection(): ?array
+    {
+        $driver = (string) config('services.languagetool.driver', 'local');
+
+        if ($driver === 'saas') {
+            $baseUrl = rtrim((string) config('services.languagetool.api_url'), '/');
+            $username = (string) config('services.languagetool.username');
+            $apiKey = (string) config('services.languagetool.api_key');
+
+            if ($baseUrl === '' || $username === '' || $apiKey === '') {
+                return null;
+            }
+
+            return [
+                'base_url' => $baseUrl,
+                'headers' => [],
+                'params' => [
+                    'username' => $username,
+                    'apiKey' => $apiKey,
+                ],
+            ];
+        }
+
+        $baseUrl = rtrim((string) config('services.languagetool.url'), '/');
+        $token = (string) config('services.languagetool.token');
+
+        if ($baseUrl === '' || $token === '') {
+            return null;
+        }
+
+        return [
+            'base_url' => $baseUrl,
+            'headers' => [
+                'Authorization' => "Bearer {$token}",
+            ],
+            'params' => [],
+        ];
     }
 
     /**

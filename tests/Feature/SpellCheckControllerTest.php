@@ -166,6 +166,61 @@ class SpellCheckControllerTest extends TestCase
                 'text' => 'Hallo Welt.',
             ])
             ->assertStatus(503)
-            ->assertJsonPath('message', 'LanguageTool is not configured.');
+            ->assertJsonPath('message', 'LanguageTool is not configured.')
+            ->assertJsonPath('reason', 'not_configured');
+    }
+
+    public function test_saas_driver_proxies_with_credentials(): void
+    {
+        config([
+            'services.languagetool.driver' => 'saas',
+            'services.languagetool.api_url' => 'https://saas.languagetool.test',
+            'services.languagetool.username' => 'user@example.com',
+            'services.languagetool.api_key' => 'saas-key',
+        ]);
+
+        Http::preventStrayRequests();
+        Http::fake([
+            'https://saas.languagetool.test/v2/check' => Http::response([
+                'matches' => [],
+            ]),
+        ]);
+
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->postJson(route('spellcheck.check'), [
+                'text' => 'Hallo Welt.',
+            ])
+            ->assertOk()
+            ->assertJsonPath('matches', []);
+
+        Http::assertSent(function (Request $request): bool {
+            return $request->url() === 'https://saas.languagetool.test/v2/check'
+                && ! $request->hasHeader('Authorization')
+                && $request['username'] === 'user@example.com'
+                && $request['apiKey'] === 'saas-key'
+                && $request['text'] === 'Hallo Welt.';
+        });
+    }
+
+    public function test_saas_driver_without_credentials_returns_503(): void
+    {
+        config([
+            'services.languagetool.driver' => 'saas',
+            'services.languagetool.api_url' => 'https://saas.languagetool.test',
+            'services.languagetool.username' => '',
+            'services.languagetool.api_key' => '',
+        ]);
+
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->postJson(route('spellcheck.check'), [
+                'text' => 'Hallo Welt.',
+            ])
+            ->assertStatus(503)
+            ->assertJsonPath('message', 'LanguageTool is not configured.')
+            ->assertJsonPath('reason', 'not_configured');
     }
 }

@@ -42,6 +42,24 @@ export type ArticleCapabilities = {
     request_revision: boolean;
     manage_workflow: boolean;
     delete: boolean;
+    comment: boolean;
+};
+
+export type ArticleComment = {
+    id: number;
+    body: string;
+    created_at: string;
+    user: ArticleUser;
+};
+
+export type ArticleCommentThread = {
+    id: string;
+    anchor_text: string | null;
+    resolved_at: string | null;
+    resolved_by: ArticleUser | null;
+    created_by: ArticleUser;
+    created_at: string;
+    comments: ArticleComment[];
 };
 
 export type ArticleWorkflowUserRole = 'author' | 'editor' | 'lector';

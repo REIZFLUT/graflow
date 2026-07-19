@@ -20,12 +20,60 @@ type SpellCheckForm = {
     level: string;
 };
 
+export type SpellCheckErrorReason =
+    | 'not_configured'
+    | 'unavailable'
+    | 'failed'
+    | 'generic';
+
 export type UseSpellCheckReturn = {
     isChecking: boolean;
     hasRun: boolean;
+    error: SpellCheckErrorReason | null;
     runCheck: (editor: Editor) => Promise<boolean>;
     clearResults: (editor: Editor) => void;
 };
+
+const ERROR_TRANSLATION_KEYS: Record<SpellCheckErrorReason, string> = {
+    not_configured: 'editor.spellcheck.error_not_configured',
+    unavailable: 'editor.spellcheck.error_unavailable',
+    failed: 'editor.spellcheck.error',
+    generic: 'editor.spellcheck.error',
+};
+
+function resolveErrorReason(caught: unknown): SpellCheckErrorReason {
+    const response = (
+        caught as { response?: { status?: number; data?: string } } | null
+    )?.response;
+
+    if (!response) {
+        return 'generic';
+    }
+
+    let reason: string | undefined;
+
+    if (typeof response.data === 'string' && response.data.length > 0) {
+        try {
+            reason = (JSON.parse(response.data) as { reason?: string }).reason;
+        } catch {
+            reason = undefined;
+        }
+    }
+
+    if (
+        reason === 'not_configured' ||
+        reason === 'unavailable' ||
+        reason === 'failed'
+    ) {
+        return reason;
+    }
+
+    if (response.status === 503) {
+        return 'unavailable';
+    }
+
+    return 'generic';
+}
 
 export function useSpellCheck(): UseSpellCheckReturn {
     const { t } = useTranslation();
@@ -43,6 +91,7 @@ export function useSpellCheck(): UseSpellCheckReturn {
         level: 'picky',
     });
     const [hasRun, setHasRun] = useState(false);
+    const [error, setError] = useState<SpellCheckErrorReason | null>(null);
 
     useEffect(() => {
         transform(() => payloadRef.current);
@@ -51,6 +100,7 @@ export function useSpellCheck(): UseSpellCheckReturn {
     const clearResults = useCallback((editor: Editor) => {
         editor.commands.clearSpellCheck();
         setHasRun(false);
+        setError(null);
     }, []);
 
     const runCheck = useCallback(
@@ -79,6 +129,7 @@ export function useSpellCheck(): UseSpellCheckReturn {
                 );
 
                 editor.commands.setSpellCheckMatches(matches);
+                setError(null);
                 setHasRun(true);
 
                 if (matches.length === 0) {
@@ -92,8 +143,13 @@ export function useSpellCheck(): UseSpellCheckReturn {
                 }
 
                 return true;
-            } catch {
-                toast.error(t('editor.spellcheck.error'));
+            } catch (caught) {
+                const reason = resolveErrorReason(caught);
+
+                editor.commands.clearSpellCheck();
+                setError(reason);
+                setHasRun(true);
+                toast.error(t(ERROR_TRANSLATION_KEYS[reason]));
 
                 return false;
             }
@@ -104,6 +160,7 @@ export function useSpellCheck(): UseSpellCheckReturn {
     return {
         isChecking: processing,
         hasRun,
+        error,
         runCheck,
         clearResults,
     };

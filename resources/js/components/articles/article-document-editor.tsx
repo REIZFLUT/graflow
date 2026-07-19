@@ -9,9 +9,14 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { toast } from 'sonner';
+import ArticleCommentController from '@/actions/App/Http/Controllers/ArticleCommentController';
 import ArticleEditorFooter from '@/components/articles/article-editor-footer';
 import ArticleImageDialog from '@/components/articles/article-image-dialog';
 import ArticleMediaPanel from '@/components/articles/article-media-panel';
+import CommentComposerDialog from '@/components/articles/comment-composer-dialog';
+import CommentMarginColumn from '@/components/articles/comment-margin-column';
+import CommentSelectionButton from '@/components/articles/comment-selection-button';
+import CommentsPanel from '@/components/articles/comments-panel';
 import EditorSidePanel from '@/components/articles/editor-side-panel';
 import FootnoteDialog from '@/components/articles/footnote-dialog';
 import FootnotesPanel from '@/components/articles/footnotes-panel';
@@ -42,8 +47,10 @@ import { getArticleStatusLabel } from '@/lib/article-status';
 import { combineDocumentText, getDocumentStats } from '@/lib/document-stats';
 import {
     deleteSelectedArticleImage,
+    focusCommentThreadInEditor,
     focusFootnoteInEditor,
     getArticleImageMediaIdsFromEditor,
+    getCommentThreadIdsInEditor,
     getFootnoteAtSelection,
     getFootnoteById,
     getFootnotesFromEditor,
@@ -59,6 +66,7 @@ import { index } from '@/routes/articles';
 import { edit as metadataEdit } from '@/routes/articles/metadata';
 import { store as storeArticlePdf } from '@/routes/articles/pdfs';
 import type {
+    ArticleCommentThread,
     ArticleMedia,
     ArticleStatus,
     ArticleUser,
@@ -90,6 +98,8 @@ type ArticleDocumentEditorProps = {
     targetCharacterCount?: number | null;
     versions?: ArticleVersion[];
     workflowEvents?: ArticleWorkflowEvent[];
+    commentThreads?: ArticleCommentThread[];
+    canComment?: boolean;
     mediaItems?: ArticleMedia[];
     mediaUploading?: boolean;
     onMediaUpload?: (
@@ -108,7 +118,8 @@ type EditorRightPanel =
     | 'history'
     | 'versions'
     | 'footnotes'
-    | 'media';
+    | 'media'
+    | 'comments';
 
 export default function ArticleDocumentEditor({
     title,
@@ -129,6 +140,8 @@ export default function ArticleDocumentEditor({
     targetCharacterCount = null,
     versions = [],
     workflowEvents = [],
+    commentThreads = [],
+    canComment = false,
     mediaItems = [],
     mediaUploading = false,
     onMediaUpload,
@@ -137,7 +150,7 @@ export default function ArticleDocumentEditor({
 }: ArticleDocumentEditorProps) {
     const { t, locale } = useTranslation();
     const { setChrome, clearChrome } = useArticleEditorChrome();
-    const { isChecking, hasRun, runCheck } = useSpellCheck();
+    const { isChecking, hasRun, error: spellCheckError, runCheck } = useSpellCheck();
     const [editor, setEditor] = useState<Editor | null>(null);
     const [footnoteDialogOpen, setFootnoteDialogOpen] = useState(false);
     const [footnoteText, setFootnoteText] = useState('');
@@ -180,6 +193,21 @@ export default function ArticleDocumentEditor({
     );
     const [activeRightPanel, setActiveRightPanel] =
         useState<EditorRightPanel | null>(null);
+    const [commentsVisible, setCommentsVisible] = useState(true);
+    const [activeCommentThreadId, setActiveCommentThreadId] = useState<
+        string | null
+    >(null);
+    const [presentCommentThreadIds, setPresentCommentThreadIds] = useState<
+        string[]
+    >([]);
+    const [commentComposerOpen, setCommentComposerOpen] = useState(false);
+    const [commentDraft, setCommentDraft] = useState('');
+    const [commentExcerpt, setCommentExcerpt] = useState('');
+    const [commentSubmitting, setCommentSubmitting] = useState(false);
+    const [pendingCommentSelection, setPendingCommentSelection] = useState<{
+        from: number;
+        to: number;
+    } | null>(null);
     const [compareBaseId, setCompareBaseId] = useState<number | null>(
         () => versions[1]?.id ?? null,
     );
@@ -643,6 +671,162 @@ export default function ArticleDocumentEditor({
         syncFootnoteCount();
     };
 
+    const syncPresentCommentThreadIds = useCallback(() => {
+        if (!editor) {
+            return;
+        }
+
+        setPresentCommentThreadIds(getCommentThreadIdsInEditor(editor));
+    }, [editor]);
+
+    useEffect(() => {
+        if (!editor) {
+            return;
+        }
+
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- initial sync from TipTap editor state
+        syncPresentCommentThreadIds();
+
+        editor.on('update', syncPresentCommentThreadIds);
+
+        return () => {
+            editor.off('update', syncPresentCommentThreadIds);
+        };
+    }, [editor, syncPresentCommentThreadIds]);
+
+    useEffect(() => {
+        if (!editor) {
+            return;
+        }
+
+        const resolvedThreadIds = commentThreads
+            .filter((thread) => thread.resolved_at !== null)
+            .map((thread) => thread.id);
+
+        editor.commands.setCommentHighlightState({
+            activeThreadId: activeCommentThreadId,
+            resolvedThreadIds,
+            visible: commentsVisible,
+        });
+    }, [editor, commentThreads, activeCommentThreadId, commentsVisible]);
+
+    const openCommentComposer = useCallback(() => {
+        if (!editor) {
+            return;
+        }
+
+        const { from, to, empty } = editor.state.selection;
+
+        if (empty) {
+            return;
+        }
+
+        const bounds = trimSelectionBounds(editor.state.doc, from, to);
+
+        setPendingCommentSelection(bounds ?? { from, to });
+        setCommentExcerpt(
+            editor.state.doc.textBetween(
+                bounds?.from ?? from,
+                bounds?.to ?? to,
+            ),
+        );
+        setCommentDraft('');
+        setCommentComposerOpen(true);
+    }, [editor]);
+
+    const saveComment = useCallback(() => {
+        if (
+            !editor ||
+            articleId === undefined ||
+            commentDraft.trim() === '' ||
+            commentSubmitting
+        ) {
+            return;
+        }
+
+        const threadId = crypto.randomUUID();
+        const chain = editor.chain().focus();
+
+        if (pendingCommentSelection) {
+            chain.setTextSelection(pendingCommentSelection);
+        }
+
+        chain.setMark('comment', { threadId }).run();
+
+        const content = editor.getJSON() as TipTapDocument;
+        onContentChange(content);
+        setCommentSubmitting(true);
+
+        router.post(
+            ArticleCommentController.store.url({ article: articleId }),
+            {
+                id: threadId,
+                body: commentDraft.trim(),
+                anchor_text: commentExcerpt.slice(0, 500),
+                content,
+            },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onSuccess: () => {
+                    setCommentComposerOpen(false);
+                    setCommentDraft('');
+                    setPendingCommentSelection(null);
+                    setActiveCommentThreadId(threadId);
+                    openRightPanel('comments');
+                },
+                onError: () => {
+                    editor.commands.removeCommentThreadById(threadId);
+                },
+                onFinish: () => setCommentSubmitting(false),
+            },
+        );
+    }, [
+        articleId,
+        commentDraft,
+        commentExcerpt,
+        commentSubmitting,
+        editor,
+        onContentChange,
+        openRightPanel,
+        pendingCommentSelection,
+    ]);
+
+    const handleSelectCommentThread = useCallback(
+        (threadId: string) => {
+            setActiveCommentThreadId(threadId);
+            openRightPanel('comments');
+
+            if (editor) {
+                focusCommentThreadInEditor(editor, threadId);
+            }
+        },
+        [editor, openRightPanel],
+    );
+
+    const handleCommentMarkClick = useCallback(
+        (threadId: string) => {
+            if (!commentsVisible) {
+                return;
+            }
+
+            handleSelectCommentThread(threadId);
+        },
+        [commentsVisible, handleSelectCommentThread],
+    );
+
+    const handleCommentComposerOpenChange = useCallback((open: boolean) => {
+        setCommentComposerOpen(open);
+
+        if (!open) {
+            setPendingCommentSelection(null);
+        }
+    }, []);
+
+    const unresolvedCommentsCount = commentThreads.filter(
+        (thread) => thread.resolved_at === null,
+    ).length;
+
     useEffect(() => {
         setChrome({
             actions: (
@@ -809,10 +993,13 @@ export default function ArticleDocumentEditor({
                         versionsCount={versions.length}
                         footnoteCount={footnoteCount}
                         mediaCount={mediaItems.length}
+                        commentsCount={unresolvedCommentsCount}
+                        showComments={canComment}
                         onFootnotesClick={() => openFootnotesSheet()}
                         onMediaClick={() => toggleRightPanel('media')}
                         onHistoryClick={() => toggleRightPanel('history')}
                         onVersionsClick={() => toggleRightPanel('versions')}
+                        onCommentsClick={() => toggleRightPanel('comments')}
                     />
                 ),
             });
@@ -836,14 +1023,29 @@ export default function ArticleDocumentEditor({
         versions.length,
         footnoteCount,
         mediaItems.length,
+        canComment,
+        unresolvedCommentsCount,
         openFootnotesSheet,
         openRightPanel,
         toggleRightPanel,
     ]);
 
     useEffect(() => {
-        if (!editor || readOnly) {
+        if (!editor) {
             setChrome({ toolbar: null });
+
+            return;
+        }
+
+        if (readOnly) {
+            setChrome({
+                toolbar: canComment ? (
+                    <CommentSelectionButton
+                        editor={editor}
+                        onClick={openCommentComposer}
+                    />
+                ) : null,
+            });
 
             return;
         }
@@ -854,6 +1056,8 @@ export default function ArticleDocumentEditor({
                     editor={editor}
                     showMarginalNotes={editorSettings.has_marginal_column}
                     onFootnoteClick={() => openFootnoteDialog()}
+                    onCommentClick={openCommentComposer}
+                    canComment={canComment}
                     onImageClick={() => openImageUploadDialog()}
                     onRemoveArticleImage={handleRemoveSelectedArticleImage}
                     onInlineMathClick={() => openMathDialogForCreate('inline')}
@@ -866,11 +1070,13 @@ export default function ArticleDocumentEditor({
             ),
         });
     }, [
+        canComment,
         editor,
         editorSettings.has_marginal_column,
         handleRemoveSelectedArticleImage,
         handleSpellCheckClick,
         isChecking,
+        openCommentComposer,
         openFootnoteDialog,
         openImageUploadDialog,
         openMathDialogForCreate,
@@ -957,6 +1163,7 @@ export default function ArticleDocumentEditor({
                                     'lg:grid-cols-[minmax(0,1fr)_12rem] lg:gap-8',
                             )}
                         >
+                            <div className="relative min-w-0">
                             <TipTapEditor
                                 variant="document"
                                 content={content}
@@ -964,6 +1171,7 @@ export default function ArticleDocumentEditor({
                                 readOnly={readOnly}
                                 onEditorReady={setEditor}
                                 onFootnoteMarkClick={openFootnotesSheet}
+                                onCommentMarkClick={handleCommentMarkClick}
                                 onSpellCheckMarkClick={
                                     handleSpellCheckMarkClick
                                 }
@@ -993,6 +1201,16 @@ export default function ArticleDocumentEditor({
                                               )
                                 }
                             />
+                            {editor && canComment && (
+                                <CommentMarginColumn
+                                    editor={editor}
+                                    threads={commentThreads}
+                                    activeThreadId={activeCommentThreadId}
+                                    visible={commentsVisible}
+                                    onSelectThread={handleSelectCommentThread}
+                                />
+                            )}
+                            </div>
                             {editor && editorSettings.has_marginal_column && (
                                 <MarginalNotesColumn
                                     editor={editor}
@@ -1061,6 +1279,7 @@ export default function ArticleDocumentEditor({
                             editor={editor}
                             hasRun={hasRun}
                             isChecking={isChecking}
+                            error={spellCheckError}
                             focusedMatchId={focusedSpellCheckMatchId}
                             onFocusMatch={handleFocusSpellCheckMatch}
                             onStartCheck={() => {
@@ -1151,7 +1370,43 @@ export default function ArticleDocumentEditor({
                         </div>
                     </EditorSidePanel>
                 )}
+
+                {articleId !== undefined && canComment && (
+                    <EditorSidePanel
+                        open={activeRightPanel === 'comments'}
+                        onOpenChange={(open) =>
+                            handleRightPanelOpenChange('comments', open)
+                        }
+                        title={t('articles.editor.comments')}
+                        description={t('articles.editor.comments_sheet')}
+                    >
+                        <div className="px-4 pt-4 pb-6">
+                            <CommentsPanel
+                                articleId={articleId}
+                                threads={commentThreads}
+                                presentThreadIds={presentCommentThreadIds}
+                                activeThreadId={activeCommentThreadId}
+                                onSelectThread={handleSelectCommentThread}
+                                commentsVisible={commentsVisible}
+                                onCommentsVisibleChange={setCommentsVisible}
+                                canComment={canComment}
+                            />
+                        </div>
+                    </EditorSidePanel>
+                )}
             </div>
+
+            {canComment && articleId !== undefined && (
+                <CommentComposerDialog
+                    open={commentComposerOpen}
+                    onOpenChange={handleCommentComposerOpenChange}
+                    value={commentDraft}
+                    onChange={setCommentDraft}
+                    onSave={saveComment}
+                    excerpt={commentExcerpt}
+                    submitting={commentSubmitting}
+                />
+            )}
 
             {!readOnly && (
                 <>

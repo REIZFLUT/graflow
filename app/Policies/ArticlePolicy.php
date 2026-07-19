@@ -28,6 +28,11 @@ class ArticlePolicy
         return in_array($user->role, [UserRole::Admin, UserRole::ProductManager], true);
     }
 
+    public function comment(User $user, Article $article): bool
+    {
+        return $this->view($user, $article);
+    }
+
     public function update(User $user, Article $article): bool
     {
         return $this->updateContent($user, $article);

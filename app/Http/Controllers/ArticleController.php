@@ -6,6 +6,7 @@ use App\Enums\ArticleStatus;
 use App\Enums\UserRole;
 use App\Http\Requests\StoreArticleRequest;
 use App\Http\Requests\UpdateArticleRequest;
+use App\Http\Resources\ArticleCommentThreadResource;
 use App\Http\Resources\ArticleMediaResource;
 use App\Http\Resources\ArticleWorkflowEventResource;
 use App\Models\Article;
@@ -84,6 +85,9 @@ class ArticleController extends Controller
             'workflowEvents' => fn ($query) => $query
                 ->with(['actor:id,name', 'assignee:id,name'])
                 ->orderBy('created_at'),
+            'commentThreads' => fn ($query) => $query
+                ->with(['createdBy:id,name', 'resolvedBy:id,name', 'comments.user:id,name'])
+                ->orderBy('created_at'),
         ]);
 
         $canManageWorkflow = Gate::allows('manageWorkflow', $article);
@@ -106,9 +110,11 @@ class ArticleController extends Controller
                 'manage_workflow' => $canManageWorkflow,
                 'force_status' => $canForceStatus,
                 'delete' => Gate::allows('delete', $article),
+                'comment' => Gate::allows('comment', $article),
             ],
             'allowedActions' => $this->allowedWorkflowActions($article),
             'workflowEvents' => ArticleWorkflowEventResource::collection($article->workflowEvents)->resolve(),
+            'commentThreads' => ArticleCommentThreadResource::collection($article->commentThreads)->resolve(),
             ...($canManageWorkflow || $canForceStatus ? [
                 'authors' => $this->workflowUsers([UserRole::Author]),
                 'editorialStaff' => $this->workflowUsers([UserRole::Editor, UserRole::Lector]),

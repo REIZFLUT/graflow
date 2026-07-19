@@ -42,6 +42,7 @@ use Illuminate\Support\Facades\Storage;
  * @property-read Collection<int, ArticleParticipant> $participants
  * @property-read Collection<int, User> $participantUsers
  * @property-read Collection<int, ArticleWorkflowEvent> $workflowEvents
+ * @property-read Collection<int, ArticleCommentThread> $commentThreads
  * @property-read Collection<int, ArticleVersion> $versions
  * @property-read Collection<int, ArticleMedia> $media
  * @property-read Collection<int, ArticlePdf> $pdfs
@@ -200,6 +201,14 @@ class Article extends Model
     public function workflowEvents(): HasMany
     {
         return $this->hasMany(ArticleWorkflowEvent::class);
+    }
+
+    /**
+     * @return HasMany<ArticleCommentThread, $this>
+     */
+    public function commentThreads(): HasMany
+    {
+        return $this->hasMany(ArticleCommentThread::class);
     }
 
     protected static function booted(): void

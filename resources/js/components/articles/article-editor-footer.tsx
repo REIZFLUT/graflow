@@ -1,4 +1,10 @@
-import { GitBranch, History, Image, SquareAsterisk } from 'lucide-react';
+import {
+    GitBranch,
+    History,
+    Image,
+    MessageSquare,
+    SquareAsterisk,
+} from 'lucide-react';
 import DocumentStatusBar from '@/components/articles/document-status-bar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,10 +20,13 @@ type ArticleEditorFooterProps = DocumentStats & {
     versionsCount?: number;
     footnoteCount?: number;
     mediaCount?: number;
+    commentsCount?: number;
+    showComments?: boolean;
     onFootnotesClick?: () => void;
     onMediaClick?: () => void;
     onHistoryClick?: () => void;
     onVersionsClick?: () => void;
+    onCommentsClick?: () => void;
 };
 
 export default function ArticleEditorFooter({
@@ -30,10 +39,13 @@ export default function ArticleEditorFooter({
     versionsCount = 0,
     footnoteCount = 0,
     mediaCount = 0,
+    commentsCount = 0,
+    showComments = false,
     onFootnotesClick,
     onMediaClick,
     onHistoryClick,
     onVersionsClick,
+    onCommentsClick,
 }: ArticleEditorFooterProps) {
     const { t } = useTranslation();
 
@@ -106,6 +118,26 @@ export default function ArticleEditorFooter({
                                 </Badge>
                             )}
                         </Button>
+                        {showComments && (
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-xs"
+                                onClick={onCommentsClick}
+                            >
+                                <MessageSquare className="size-3.5" />
+                                {t('articles.editor.comments')}
+                                {commentsCount > 0 && (
+                                    <Badge
+                                        variant="secondary"
+                                        className="ml-1 h-5 min-w-5 px-1"
+                                    >
+                                        {commentsCount}
+                                    </Badge>
+                                )}
+                            </Button>
+                        )}
                     </>
                 )}
             </div>

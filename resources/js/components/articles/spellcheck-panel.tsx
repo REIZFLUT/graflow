@@ -1,8 +1,9 @@
 import type { Editor } from '@tiptap/react';
 import { useEditorState } from '@tiptap/react';
-import { Check, SpellCheck2, X } from 'lucide-react';
+import { AlertTriangle, Check, SpellCheck2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
+import type { SpellCheckErrorReason } from '@/hooks/use-spell-check';
 import { useTranslation } from '@/hooks/use-translation';
 import {
     focusSpellCheckMatch,
@@ -15,16 +16,25 @@ type SpellCheckPanelProps = {
     editor: Editor | null;
     hasRun: boolean;
     isChecking?: boolean;
+    error?: SpellCheckErrorReason | null;
     focusedMatchId?: string | null;
     onFocusMatch?: (match: MappedSpellCheckMatch) => void;
     onStartCheck?: () => void;
     className?: string;
 };
 
+const ERROR_TRANSLATION_KEYS: Record<SpellCheckErrorReason, string> = {
+    not_configured: 'editor.spellcheck.error_not_configured',
+    unavailable: 'editor.spellcheck.error_unavailable',
+    failed: 'editor.spellcheck.error',
+    generic: 'editor.spellcheck.error',
+};
+
 export default function SpellCheckPanel({
     editor,
     hasRun,
     isChecking = false,
+    error = null,
     focusedMatchId = null,
     onFocusMatch,
     onStartCheck,
@@ -69,19 +79,29 @@ export default function SpellCheckPanel({
                 </Button>
             )}
 
-            {!isChecking && !hasRun && (
+            {!isChecking && error && (
+                <div
+                    role="alert"
+                    className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
+                >
+                    <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                    <span>{t(ERROR_TRANSLATION_KEYS[error])}</span>
+                </div>
+            )}
+
+            {!isChecking && !error && !hasRun && (
                 <p className="text-sm text-muted-foreground">
                     {t('editor.spellcheck.not_run')}
                 </p>
             )}
 
-            {!isChecking && hasRun && matches.length === 0 && (
+            {!isChecking && !error && hasRun && matches.length === 0 && (
                 <p className="text-sm text-muted-foreground">
                     {t('editor.spellcheck.empty')}
                 </p>
             )}
 
-            {!isChecking && matches.length > 0 && (
+            {!isChecking && !error && matches.length > 0 && (
                 <ol className="space-y-4">
                     {matches.map((match, index) => {
                         const isFocused = match.id === focusedMatchId;

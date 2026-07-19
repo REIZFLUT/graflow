@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Enums\ArticleStatus;
 use App\Enums\PublicationEditorFont;
 use App\Models\Article;
+use App\Models\ArticleComment;
+use App\Models\ArticleCommentThread;
 use App\Models\ArticleMedia;
 use App\Models\Publication;
 use App\Models\PublicationChapter;
@@ -217,6 +219,72 @@ class DemoSeederTest extends TestCase
         foreach ($authors as $author) {
             $this->assertSame(3, Article::query()->where('owner_id', $author->id)->count());
         }
+    }
+
+    public function test_demo_seeder_seeds_comment_threads_anchored_in_content(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        $this->assertSame(4, ArticleCommentThread::query()->count());
+        $this->assertSame(8, ArticleComment::query()->count());
+        $this->assertSame(1, ArticleCommentThread::query()->whereNotNull('resolved_at')->count());
+        $this->assertSame(3, ArticleCommentThread::query()->whereNull('resolved_at')->count());
+
+        $resolvedThread = ArticleCommentThread::query()->whereNotNull('resolved_at')->firstOrFail();
+        $this->assertNotNull($resolvedThread->resolved_by_id);
+
+        $threadWithReplies = ArticleCommentThread::query()->withCount('comments')->get()
+            ->firstWhere('comments_count', '>=', 2);
+        $this->assertNotNull($threadWithReplies, 'Expected at least one comment thread with replies.');
+
+        $threadIds = ArticleCommentThread::query()->pluck('id')->all();
+
+        foreach (ArticleCommentThread::query()->with('article')->get() as $thread) {
+            $markThreadIds = $this->commentThreadIdsInContent($thread->article->content ?? []);
+            $this->assertContains(
+                $thread->id,
+                $markThreadIds,
+                "Comment thread [{$thread->id}] is not anchored in its article content.",
+            );
+        }
+
+        foreach (Article::query()->get() as $article) {
+            foreach ($this->commentThreadIdsInContent($article->content ?? []) as $markThreadId) {
+                $this->assertContains($markThreadId, $threadIds);
+            }
+        }
+
+        $this->seed(DatabaseSeeder::class);
+
+        $this->assertSame(4, ArticleCommentThread::query()->count());
+        $this->assertSame(8, ArticleComment::query()->count());
+    }
+
+    /**
+     * @param  array<string, mixed>  $node
+     * @return list<string>
+     */
+    private function commentThreadIdsInContent(array $node): array
+    {
+        $threadIds = [];
+
+        foreach ($node['marks'] ?? [] as $mark) {
+            if (is_array($mark) && ($mark['type'] ?? null) === 'comment') {
+                $threadId = $mark['attrs']['threadId'] ?? null;
+
+                if (is_string($threadId)) {
+                    $threadIds[] = $threadId;
+                }
+            }
+        }
+
+        foreach ($node['content'] ?? [] as $child) {
+            if (is_array($child)) {
+                $threadIds = array_merge($threadIds, $this->commentThreadIdsInContent($child));
+            }
+        }
+
+        return array_values(array_unique($threadIds));
     }
 
     public function test_demo_seeder_articles_include_all_editor_features(): void

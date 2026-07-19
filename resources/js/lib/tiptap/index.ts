@@ -8,6 +8,8 @@ import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import StarterKit from '@tiptap/starter-kit';
 import { ArticleImage } from '@/lib/tiptap/article-image';
 import { CharacterFormat } from '@/lib/tiptap/character-format';
+import { CommentHighlight } from '@/lib/tiptap/comment-highlight';
+import { CommentMark } from '@/lib/tiptap/comment-mark';
 import { FootnoteMark } from '@/lib/tiptap/footnote-mark';
 import { InfoBox } from '@/lib/tiptap/info-box';
 import { MarginalNote } from '@/lib/tiptap/marginal-note';
@@ -48,6 +50,17 @@ export {
     getParagraphAtSelection,
 } from '@/lib/tiptap/paragraph-format';
 export { CharacterFormat } from '@/lib/tiptap/character-format';
+export { CommentMark } from '@/lib/tiptap/comment-mark';
+export {
+    CommentHighlight,
+    commentHighlightPluginKey,
+    type CommentHighlightState,
+} from '@/lib/tiptap/comment-highlight';
+export {
+    focusCommentThreadInEditor,
+    getCommentMarkRange,
+    getCommentThreadIdsInEditor,
+} from '@/lib/tiptap/comment-utils';
 export { InfoBox } from '@/lib/tiptap/info-box';
 export {
     getTopLevelBlockAtSelection,
@@ -127,6 +140,8 @@ export function createArticleEditorExtensions(options: {
         CharacterFormat,
         InfoBox,
         FootnoteMark,
+        CommentMark,
+        CommentHighlight,
         ArticleImage,
         SpellCheck,
         VersionDiffHighlight,
