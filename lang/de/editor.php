@@ -82,6 +82,32 @@ return [
         'table_toggle_header_row' => 'Kopfzeile umschalten',
         'table_delete' => 'Tabelle löschen',
         'spellcheck' => 'Rechtschreibung prüfen',
+        'proofread' => 'KI-Lektorat',
+    ],
+
+    'proofread' => [
+        'description' => 'Das KI-Lektorat prüft Sprache und Stil: unfertige oder unlogische Sätze, Wortwiederholungen, Umgangssprache und stilistische Auffälligkeiten – über die reine Rechtschreibprüfung hinaus.',
+        'start' => 'KI-Lektorat starten',
+        'checking' => 'KI-Lektorat läuft',
+        'not_run' => 'Noch nicht geprüft.',
+        'empty' => 'Keine sprachlichen Auffälligkeiten gefunden.',
+        'empty_document' => 'Kein Text zum Prüfen vorhanden.',
+        'no_issues' => 'Keine sprachlichen Auffälligkeiten gefunden.',
+        'issues_found' => ':count Hinweise gefunden',
+        'error' => 'KI-Lektorat fehlgeschlagen.',
+        'error_not_configured' => 'Das KI-Lektorat ist nicht konfiguriert. Bitte hinterlege die Zugangsdaten in der Serverkonfiguration.',
+        'error_unavailable' => 'Die KI ist derzeit nicht erreichbar. Bitte versuche es später erneut.',
+        'dismiss' => 'Verwerfen',
+        'suggestion' => 'Vorschlag',
+        'not_located' => 'Diese Stelle konnte im Text nicht eindeutig markiert werden.',
+        'categories' => [
+            'unfinished_sentence' => 'Unfertiger Satz',
+            'illogical_sentence' => 'Unlogischer Satz',
+            'word_repetition' => 'Wortwiederholung',
+            'colloquialism' => 'Umgangssprache',
+            'language_pattern' => 'Sprachliches Muster',
+            'other' => 'Sonstiges',
+        ],
     ],
 
     'spellcheck' => [

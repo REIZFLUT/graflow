@@ -216,6 +216,31 @@
         text-decoration-color: color-mix(in oklab, oklch(0.62 0.16 55) 85%, transparent);
     }
 
+    .article-document-body .tiptap .proofread-issue {
+        text-decoration-line: underline;
+        text-decoration-style: dotted;
+        text-decoration-thickness: 2px;
+        text-underline-offset: 0.2em;
+        text-decoration-color: color-mix(in oklab, oklch(0.55 0.2 300) 80%, transparent);
+        cursor: pointer;
+        border-radius: 0.125rem;
+        background-color: color-mix(in oklab, oklch(0.55 0.2 300) 8%, transparent);
+        transition: background-color 0.3s ease;
+    }
+
+    .article-document-body .tiptap .proofread-severity-info {
+        text-decoration-color: color-mix(in oklab, oklch(0.6 0.13 260) 80%, transparent);
+        background-color: color-mix(in oklab, oklch(0.6 0.13 260) 7%, transparent);
+    }
+
+    .article-document-body .tiptap .proofread-issue-highlight {
+        background-color: rgb(216 180 254 / 0.55);
+    }
+
+    .dark .article-document-body .tiptap .proofread-issue-highlight {
+        background-color: rgb(88 28 135 / 0.5);
+    }
+
     .article-document-body .article-prose,
     .article-document-body .article-prose :is(h2, h3) {
         scroll-margin-top: 1.5rem;

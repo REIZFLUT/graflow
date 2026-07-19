@@ -14,6 +14,7 @@ import { FootnoteMark } from '@/lib/tiptap/footnote-mark';
 import { InfoBox } from '@/lib/tiptap/info-box';
 import { MarginalNote } from '@/lib/tiptap/marginal-note';
 import { ParagraphFormat } from '@/lib/tiptap/paragraph-format';
+import { Proofread } from '@/lib/tiptap/proofread';
 import { SpellCheck } from '@/lib/tiptap/spellcheck';
 import { VersionDiffHighlight } from '@/lib/tiptap/version-diff-highlight';
 
@@ -90,6 +91,21 @@ export {
     type LanguageToolMatch,
 } from '@/lib/tiptap/spellcheck-utils';
 export {
+    Proofread,
+    focusProofreadIssue,
+    getProofreadIssueById,
+    getProofreadIssues,
+    proofreadPluginKey,
+    type MappedProofreadIssue,
+} from '@/lib/tiptap/proofread';
+export {
+    mapIssuesToPositions,
+    normalizeProofreadCategory,
+    type ProofreadCategory,
+    type ProofreadIssue,
+    type ProofreadSeverity,
+} from '@/lib/tiptap/proofread-utils';
+export {
     scrollEditorToPlainTextLine,
     scrollEditorToTitle,
 } from '@/lib/tiptap/editor-navigation';
@@ -144,6 +160,7 @@ export function createArticleEditorExtensions(options: {
         CommentHighlight,
         ArticleImage,
         SpellCheck,
+        Proofread,
         VersionDiffHighlight,
         Placeholder.configure({
             placeholder: options.placeholder,

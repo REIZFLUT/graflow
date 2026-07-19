@@ -210,6 +210,8 @@ return [
         'footnotes_sheet' => 'Alle Fußnoten des Artikels im Überblick.',
         'spellcheck' => 'Rechtschreibprüfung',
         'spellcheck_sheet' => 'Gefundene Rechtschreib-, Grammatik- und Stilhinweise.',
+        'proofread' => 'KI-Lektorat',
+        'proofread_sheet' => 'Sprachliche und stilistische Hinweise der KI.',
         'media_sheet' => 'Bilder dieses Artikels verwalten und einfügen.',
         'image_in_use_alert' => 'Dieses Bild wird noch im Artikel verwendet und kann nicht gelöscht werden.',
     ],

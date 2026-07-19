@@ -210,6 +210,8 @@ return [
         'footnotes_sheet' => 'Overview of all footnotes in this article.',
         'spellcheck' => 'Spell check',
         'spellcheck_sheet' => 'Spelling, grammar, and style suggestions found in the article.',
+        'proofread' => 'AI editorial review',
+        'proofread_sheet' => 'Language and style suggestions from the AI.',
         'media_sheet' => 'Manage and insert images for this article.',
         'image_in_use_alert' => 'This image is still used in the article and cannot be deleted.',
     ],

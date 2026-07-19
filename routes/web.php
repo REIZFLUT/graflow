@@ -10,6 +10,7 @@ use App\Http\Controllers\ArticleWorkflowController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EditorSettingsSetController;
 use App\Http\Controllers\HandbookController;
+use App\Http\Controllers\ProofreadController;
 use App\Http\Controllers\PublicationCategoryController;
 use App\Http\Controllers\PublicationChapterController;
 use App\Http\Controllers\PublicationController;
@@ -31,6 +32,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::post('spellcheck', [SpellCheckController::class, 'check'])
         ->name('spellcheck.check');
+
+    Route::post('proofread', [ProofreadController::class, 'check'])
+        ->name('proofread.check');
 
     Route::get('handbook', [HandbookController::class, 'show'])->name('handbook.show');
     Route::post('handbook/articles', [HandbookController::class, 'storeArticle'])

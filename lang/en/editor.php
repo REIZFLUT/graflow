@@ -82,6 +82,32 @@ return [
         'table_toggle_header_row' => 'Toggle header row',
         'table_delete' => 'Delete table',
         'spellcheck' => 'Check spelling',
+        'proofread' => 'AI editorial review',
+    ],
+
+    'proofread' => [
+        'description' => 'The AI review checks language and style: unfinished or illogical sentences, word repetitions, colloquialisms and stylistic issues – beyond what a plain spell checker finds.',
+        'start' => 'Start AI review',
+        'checking' => 'AI review running',
+        'not_run' => 'Not checked yet.',
+        'empty' => 'No language issues found.',
+        'empty_document' => 'No text available to check.',
+        'no_issues' => 'No language issues found.',
+        'issues_found' => ':count issues found',
+        'error' => 'AI review failed.',
+        'error_not_configured' => 'The AI review is not configured. Please add the credentials to the server configuration.',
+        'error_unavailable' => 'The AI is currently unavailable. Please try again later.',
+        'dismiss' => 'Dismiss',
+        'suggestion' => 'Suggestion',
+        'not_located' => 'This passage could not be uniquely highlighted in the text.',
+        'categories' => [
+            'unfinished_sentence' => 'Unfinished sentence',
+            'illogical_sentence' => 'Illogical sentence',
+            'word_repetition' => 'Word repetition',
+            'colloquialism' => 'Colloquialism',
+            'language_pattern' => 'Language pattern',
+            'other' => 'Other',
+        ],
     ],
 
     'spellcheck' => [

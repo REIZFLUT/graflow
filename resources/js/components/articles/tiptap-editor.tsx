@@ -16,6 +16,7 @@ import {
     Pilcrow,
     Quote,
     Sigma,
+    Sparkles,
     SpellCheck2,
     SquareAsterisk,
     SquareFunction,
@@ -54,6 +55,7 @@ type TipTapEditorProps = {
     onFootnoteMarkClick?: (footnoteId: string) => void;
     onCommentMarkClick?: (threadId: string) => void;
     onSpellCheckMarkClick?: (matchId: string, rect: DOMRect) => void;
+    onProofreadMarkClick?: (issueId: string, rect: DOMRect) => void;
     onArticleImageSelect?: (mediaId: string) => void;
     onArticleImageDoubleClick?: (mediaId: string) => void;
     onInlineMathClick?: (latex: string, pos: number) => void;
@@ -107,6 +109,8 @@ export function TipTapToolbar({
     onBlockMathClick,
     onSpellCheckClick,
     isSpellChecking = false,
+    onProofreadClick,
+    isProofreading = false,
 }: {
     editor: Editor;
     showMarginalNotes?: boolean;
@@ -119,6 +123,8 @@ export function TipTapToolbar({
     onBlockMathClick?: () => void;
     onSpellCheckClick?: () => void;
     isSpellChecking?: boolean;
+    onProofreadClick?: () => void;
+    isProofreading?: boolean;
 }) {
     const { t } = useTranslation();
     const normalParagraphFormat = useMemo(
@@ -442,6 +448,17 @@ export function TipTapToolbar({
                     <SpellCheck2 className="size-4 stroke-[1.75]" />
                 )}
             </ToolbarButton>
+            <ToolbarButton
+                label={t('editor.toolbar.proofread')}
+                disabled={isProofreading || !onProofreadClick}
+                onClick={() => onProofreadClick?.()}
+            >
+                {isProofreading ? (
+                    <Spinner className="size-4" />
+                ) : (
+                    <Sparkles className="size-4 stroke-[1.75]" />
+                )}
+            </ToolbarButton>
         </div>
     );
 }
@@ -456,6 +473,7 @@ export default function TipTapEditor({
     onFootnoteMarkClick,
     onCommentMarkClick,
     onSpellCheckMarkClick,
+    onProofreadMarkClick,
     onArticleImageSelect,
     onArticleImageDoubleClick,
     onInlineMathClick,
@@ -466,6 +484,7 @@ export default function TipTapEditor({
     const onFootnoteMarkClickRef = useRef(onFootnoteMarkClick);
     const onCommentMarkClickRef = useRef(onCommentMarkClick);
     const onSpellCheckMarkClickRef = useRef(onSpellCheckMarkClick);
+    const onProofreadMarkClickRef = useRef(onProofreadMarkClick);
     const onArticleImageSelectRef = useRef(onArticleImageSelect);
     const onArticleImageDoubleClickRef = useRef(onArticleImageDoubleClick);
     const onInlineMathClickRef = useRef(onInlineMathClick);
@@ -478,6 +497,7 @@ export default function TipTapEditor({
         onFootnoteMarkClickRef.current = onFootnoteMarkClick;
         onCommentMarkClickRef.current = onCommentMarkClick;
         onSpellCheckMarkClickRef.current = onSpellCheckMarkClick;
+        onProofreadMarkClickRef.current = onProofreadMarkClick;
         onArticleImageSelectRef.current = onArticleImageSelect;
         onArticleImageDoubleClickRef.current = onArticleImageDoubleClick;
         onInlineMathClickRef.current = onInlineMathClick;
@@ -489,6 +509,7 @@ export default function TipTapEditor({
         onCommentMarkClick,
         onFootnoteMarkClick,
         onInlineMathClick,
+        onProofreadMarkClick,
         onSpellCheckMarkClick,
     ]);
 
@@ -536,6 +557,25 @@ export default function TipTapEditor({
                         onSpellCheckMarkClickRef.current?.(
                             matchId,
                             spellcheckElement.getBoundingClientRect(),
+                        );
+
+                        return true;
+                    }
+                }
+
+                const proofreadElement = (event.target as HTMLElement).closest(
+                    '.proofread-issue',
+                );
+
+                if (proofreadElement) {
+                    const issueId =
+                        proofreadElement.getAttribute('data-proofread-id');
+
+                    if (issueId) {
+                        event.preventDefault();
+                        onProofreadMarkClickRef.current?.(
+                            issueId,
+                            proofreadElement.getBoundingClientRect(),
                         );
 
                         return true;

@@ -26,6 +26,8 @@ import type {
     MathDialogMode,
     MathDialogVariant,
 } from '@/components/articles/math-dialog';
+import ProofreadPanel from '@/components/articles/proofread-panel';
+import ProofreadPopover from '@/components/articles/proofread-popover';
 import SpellCheckPanel from '@/components/articles/spellcheck-panel';
 import SpellCheckPopover from '@/components/articles/spellcheck-popover';
 import TipTapEditor, {
@@ -40,6 +42,7 @@ import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { useArticleEditorChrome } from '@/contexts/article-editor-chrome-context';
 import type { ArticleMediaFormData } from '@/hooks/use-article-media';
+import { useProofread } from '@/hooks/use-proofread';
 import { useSpellCheck } from '@/hooks/use-spell-check';
 import { useTranslation } from '@/hooks/use-translation';
 import { generateArticlePdfBlob } from '@/lib/article-pdf/generate';
@@ -60,7 +63,11 @@ import {
     syncArticleImagesFromMedia,
     trimSelectionBounds,
 } from '@/lib/tiptap';
-import type { ArticleFootnote, MappedSpellCheckMatch } from '@/lib/tiptap';
+import type {
+    ArticleFootnote,
+    MappedProofreadIssue,
+    MappedSpellCheckMatch,
+} from '@/lib/tiptap';
 import { cn } from '@/lib/utils';
 import { index } from '@/routes/articles';
 import { edit as metadataEdit } from '@/routes/articles/metadata';
@@ -115,6 +122,7 @@ type ArticleDocumentEditorProps = {
 
 type EditorRightPanel =
     | 'spellcheck'
+    | 'proofread'
     | 'history'
     | 'versions'
     | 'footnotes'
@@ -151,6 +159,12 @@ export default function ArticleDocumentEditor({
     const { t, locale } = useTranslation();
     const { setChrome, clearChrome } = useArticleEditorChrome();
     const { isChecking, hasRun, error: spellCheckError, runCheck } = useSpellCheck();
+    const {
+        isChecking: isProofreading,
+        hasRun: proofreadHasRun,
+        error: proofreadError,
+        runCheck: runProofread,
+    } = useProofread();
     const [editor, setEditor] = useState<Editor | null>(null);
     const [footnoteDialogOpen, setFootnoteDialogOpen] = useState(false);
     const [footnoteText, setFootnoteText] = useState('');
@@ -169,6 +183,14 @@ export default function ArticleDocumentEditor({
         string | null
     >(null);
     const [spellCheckPopoverRect, setSpellCheckPopoverRect] =
+        useState<DOMRect | null>(null);
+    const [focusedProofreadIssueId, setFocusedProofreadIssueId] = useState<
+        string | null
+    >(null);
+    const [proofreadPopoverIssueId, setProofreadPopoverIssueId] = useState<
+        string | null
+    >(null);
+    const [proofreadPopoverRect, setProofreadPopoverRect] =
         useState<DOMRect | null>(null);
     const [editingFootnoteId, setEditingFootnoteId] = useState<string | null>(
         null,
@@ -436,6 +458,10 @@ export default function ArticleDocumentEditor({
             setFocusedSpellCheckMatchId(null);
         }
 
+        if (panel === 'proofread') {
+            setFocusedProofreadIssueId(null);
+        }
+
         if (panel === 'footnotes') {
             setFocusedFootnoteId(null);
         }
@@ -446,6 +472,10 @@ export default function ArticleDocumentEditor({
 
         if (panel !== 'spellcheck') {
             setFocusedSpellCheckMatchId(null);
+        }
+
+        if (panel !== 'proofread') {
+            setFocusedProofreadIssueId(null);
         }
 
         if (panel !== 'footnotes') {
@@ -545,6 +575,55 @@ export default function ArticleDocumentEditor({
     const handleFocusSpellCheckMatch = useCallback(
         (match: MappedSpellCheckMatch) => {
             setFocusedSpellCheckMatchId(match.id);
+        },
+        [],
+    );
+
+    const closeProofreadPopover = useCallback(() => {
+        setProofreadPopoverIssueId(null);
+        setProofreadPopoverRect(null);
+    }, []);
+
+    const handleProofreadMarkClick = useCallback(
+        (issueId: string, rect: DOMRect) => {
+            setProofreadPopoverIssueId(issueId);
+            setProofreadPopoverRect(rect);
+            setFocusedProofreadIssueId(issueId);
+        },
+        [],
+    );
+
+    const handleProofreadClick = useCallback(async () => {
+        if (!editor || isProofreading) {
+            return;
+        }
+
+        closeProofreadPopover();
+        openRightPanel('proofread');
+
+        if (!proofreadHasRun) {
+            await runProofread(editor);
+        }
+    }, [
+        closeProofreadPopover,
+        editor,
+        isProofreading,
+        openRightPanel,
+        proofreadHasRun,
+        runProofread,
+    ]);
+
+    const handleStartProofread = useCallback(async () => {
+        if (!editor || isProofreading) {
+            return;
+        }
+
+        await runProofread(editor);
+    }, [editor, isProofreading, runProofread]);
+
+    const handleFocusProofreadIssue = useCallback(
+        (issue: MappedProofreadIssue) => {
+            setFocusedProofreadIssueId(issue.id);
         },
         [],
     );
@@ -1066,6 +1145,10 @@ export default function ArticleDocumentEditor({
                         void handleSpellCheckClick();
                     }}
                     isSpellChecking={isChecking}
+                    onProofreadClick={() => {
+                        void handleProofreadClick();
+                    }}
+                    isProofreading={isProofreading}
                 />
             ),
         });
@@ -1076,6 +1159,8 @@ export default function ArticleDocumentEditor({
         handleRemoveSelectedArticleImage,
         handleSpellCheckClick,
         isChecking,
+        handleProofreadClick,
+        isProofreading,
         openCommentComposer,
         openFootnoteDialog,
         openImageUploadDialog,
@@ -1175,6 +1260,7 @@ export default function ArticleDocumentEditor({
                                 onSpellCheckMarkClick={
                                     handleSpellCheckMarkClick
                                 }
+                                onProofreadMarkClick={handleProofreadMarkClick}
                                 onArticleImageDoubleClick={
                                     readOnly
                                         ? undefined
@@ -1284,6 +1370,29 @@ export default function ArticleDocumentEditor({
                             onFocusMatch={handleFocusSpellCheckMatch}
                             onStartCheck={() => {
                                 void handleStartSpellCheck();
+                            }}
+                        />
+                    </div>
+                </EditorSidePanel>
+
+                <EditorSidePanel
+                    open={activeRightPanel === 'proofread'}
+                    onOpenChange={(open) =>
+                        handleRightPanelOpenChange('proofread', open)
+                    }
+                    title={t('articles.editor.proofread')}
+                    description={t('articles.editor.proofread_sheet')}
+                >
+                    <div className="px-4 pt-4 pb-6">
+                        <ProofreadPanel
+                            editor={editor}
+                            hasRun={proofreadHasRun}
+                            isChecking={isProofreading}
+                            error={proofreadError}
+                            focusedIssueId={focusedProofreadIssueId}
+                            onFocusIssue={handleFocusProofreadIssue}
+                            onStartCheck={() => {
+                                void handleStartProofread();
                             }}
                         />
                     </div>
@@ -1444,6 +1553,14 @@ export default function ArticleDocumentEditor({
                 anchorRect={spellCheckPopoverRect}
                 onClose={closeSpellCheckPopover}
                 onFocusMatch={handleFocusSpellCheckMatch}
+            />
+
+            <ProofreadPopover
+                editor={editor}
+                issueId={proofreadPopoverIssueId}
+                anchorRect={proofreadPopoverRect}
+                onClose={closeProofreadPopover}
+                onFocusIssue={handleFocusProofreadIssue}
             />
 
             {!readOnly && (

@@ -44,4 +44,19 @@ return [
         'api_key' => env('LANGUAGETOOL_API_KEY'),
     ],
 
+    /*
+    | AI editorial review ("KI-Lektorat"). Credentials for the underlying
+    | provider live in config/ai.php (driven by the .env). These values select
+    | which configured provider/model the review agent should use. When
+    | "provider" is null the ai.default provider applies; when "model" is null
+    | the provider's default text model applies.
+    */
+    'ai_lektorat' => [
+        'enabled' => env('AI_LEKTORAT_ENABLED', true),
+        'provider' => env('AI_LEKTORAT_PROVIDER'),
+        'model' => env('AI_LEKTORAT_MODEL', env('OPENAI_MODEL')),
+        'reasoning_effort' => env('AI_LEKTORAT_REASONING_EFFORT', env('OPENAI_REASONING_EFFORT', 'medium')),
+        'language' => env('AI_LEKTORAT_LANGUAGE', 'de'),
+    ],
+
 ];
