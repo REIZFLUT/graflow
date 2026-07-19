@@ -174,6 +174,34 @@ export type PaginatedArticles = {
     }>;
 };
 
+export type ArticleSortColumn =
+    | 'title'
+    | 'status'
+    | 'publication'
+    | 'assignee'
+    | 'deadline'
+    | 'updated_at';
+
+export type ArticleSortDirection = 'asc' | 'desc';
+
+export type ArticlePerPage = 10 | 15 | 25 | 50;
+
+export type ArticleFilters = {
+    search: string | null;
+    sort: ArticleSortColumn | null;
+    direction: ArticleSortDirection | null;
+    publication_id: number | null;
+    issue_id: number | null;
+    author_id: number | null;
+    per_page: number;
+};
+
+export type ArticleFilterOptions = {
+    publications: Array<{ id: number; name: string }>;
+    issues: Array<{ id: number; label: string; publication_id: number }>;
+    authors: Array<{ id: number; name: string }>;
+};
+
 export const emptyTipTapDocument = (): TipTapDocument => ({
     type: 'doc',
     content: [{ type: 'paragraph' }],

@@ -4,16 +4,20 @@ namespace App\Http\Controllers;
 
 use App\Enums\ArticleStatus;
 use App\Enums\UserRole;
+use App\Http\Requests\IndexArticleRequest;
 use App\Http\Requests\StoreArticleRequest;
 use App\Http\Requests\UpdateArticleRequest;
 use App\Http\Resources\ArticleCommentThreadResource;
 use App\Http\Resources\ArticleMediaResource;
 use App\Http\Resources\ArticleWorkflowEventResource;
 use App\Models\Article;
+use App\Models\Publication;
+use App\Models\PublicationIssue;
 use App\Models\User;
 use App\Services\ArticleVersionService;
 use App\Support\ArticleCharacterCounter;
 use App\Support\ArticleEditorSettingsResolver;
+use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -28,31 +32,136 @@ class ArticleController extends Controller
         private ArticleEditorSettingsResolver $editorSettingsResolver,
     ) {}
 
-    public function index(): Response
+    public function index(IndexArticleRequest $request): Response
     {
         $this->authorize('viewAny', Article::class);
 
         $user = auth()->user();
-        $articles = Article::query()
-            ->when($user->role !== UserRole::Admin, fn ($query) => $query->where(
+        $filters = $request->validated();
+
+        $search = $filters['search'] ?? null;
+        $sort = $filters['sort'] ?? null;
+        $direction = ($filters['direction'] ?? null) === 'desc' ? 'desc' : 'asc';
+        $publicationId = isset($filters['publication_id']) ? (int) $filters['publication_id'] : null;
+        $issueId = isset($filters['issue_id']) ? (int) $filters['issue_id'] : null;
+        $authorId = isset($filters['author_id']) ? (int) $filters['author_id'] : null;
+        $perPage = isset($filters['per_page']) ? (int) $filters['per_page'] : 15;
+
+        $applyAuthorizationScope = function ($query) use ($user): void {
+            $query->when($user->role !== UserRole::Admin, fn ($scoped) => $scoped->where(
                 fn ($relevant) => $relevant
                     ->where('product_manager_id', $user->id)
                     ->orWhere('author_id', $user->id)
                     ->orWhere('current_assignee_id', $user->id)
                     ->orWhereHas('participants', fn ($participants) => $participants->where('user_id', $user->id)),
+            ));
+        };
+
+        $articles = Article::query()
+            ->tap($applyAuthorizationScope)
+            ->when($search !== null, fn ($query) => $query->where('articles.title', 'like', "%{$search}%"))
+            ->when($publicationId !== null, fn ($query) => $query->whereHas(
+                'publicationIssue',
+                fn ($issue) => $issue->where('publication_id', $publicationId),
             ))
+            ->when($issueId !== null, fn ($query) => $query->where('articles.publication_issue_id', $issueId))
+            ->when($authorId !== null, fn ($query) => $query->where('articles.author_id', $authorId))
             ->with([
                 'author:id,name',
                 'currentAssignee:id,name',
                 'publicationChapter:id,title,position',
                 'publicationIssue.publication',
-            ])
-            ->latest()
-            ->paginate(15);
+            ]);
+
+        if ($sort !== null) {
+            match ($sort) {
+                'title' => $articles->orderBy('articles.title', $direction),
+                'status' => $articles->orderBy('articles.status', $direction),
+                'deadline' => $articles->orderBy('articles.submission_deadline', $direction),
+                'updated_at' => $articles->orderBy('articles.updated_at', $direction),
+                'publication' => $articles
+                    ->leftJoin('publication_issues', 'articles.publication_issue_id', '=', 'publication_issues.id')
+                    ->leftJoin('publications', 'publication_issues.publication_id', '=', 'publications.id')
+                    ->select('articles.*')
+                    ->orderBy('publications.name', $direction),
+                'assignee' => $articles
+                    ->leftJoin('users', 'articles.current_assignee_id', '=', 'users.id')
+                    ->select('articles.*')
+                    ->orderBy('users.name', $direction),
+            };
+        } else {
+            $articles->latest();
+        }
+
+        $articles = $articles->paginate($perPage)->withQueryString();
 
         return Inertia::render('articles/index', [
             'articles' => $articles,
+            'filters' => [
+                'search' => $search,
+                'sort' => $sort,
+                'direction' => $sort !== null ? $direction : null,
+                'publication_id' => $publicationId,
+                'issue_id' => $issueId,
+                'author_id' => $authorId,
+                'per_page' => $perPage,
+            ],
+            'filterOptions' => $this->articleFilterOptions($applyAuthorizationScope),
         ]);
+    }
+
+    /**
+     * @param  \Closure(Builder): void  $applyAuthorizationScope
+     * @return array{
+     *     publications: list<array{id: int, name: string}>,
+     *     issues: list<array{id: int, label: string, publication_id: int}>,
+     *     authors: list<array{id: int, name: string}>,
+     * }
+     */
+    private function articleFilterOptions(\Closure $applyAuthorizationScope): array
+    {
+        $publications = Publication::query()
+            ->whereHas('issues.articles', $applyAuthorizationScope)
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(static fn (Publication $publication): array => [
+                'id' => $publication->id,
+                'name' => $publication->name,
+            ])
+            ->all();
+
+        $issues = PublicationIssue::query()
+            ->whereHas('articles', $applyAuthorizationScope)
+            ->orderBy('label')
+            ->get(['id', 'label', 'publication_id'])
+            ->map(static fn (PublicationIssue $issue): array => [
+                'id' => $issue->id,
+                'label' => $issue->label,
+                'publication_id' => $issue->publication_id,
+            ])
+            ->all();
+
+        $authorIds = Article::query()
+            ->tap($applyAuthorizationScope)
+            ->whereNotNull('author_id')
+            ->distinct()
+            ->pluck('author_id');
+
+        $authors = User::query()
+            ->whereIn('id', $authorIds)
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(static fn (User $author): array => [
+                'id' => $author->id,
+                'name' => $author->name,
+            ])
+            ->all();
+
+        return [
+            'publications' => $publications,
+            'issues' => $issues,
+            'authors' => $authors,
+        ];
     }
 
     public function create(): RedirectResponse

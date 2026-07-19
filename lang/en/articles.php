@@ -17,8 +17,23 @@ return [
         'deadline' => 'Deadline',
         'target_count' => 'Target characters',
         'updated_at' => 'Last updated',
+        'columns' => 'Columns',
+        'actions' => 'Actions',
+        'rows_per_page' => 'Rows per page',
+        'no_results' => 'No results for the selected filters.',
+        'sort_asc' => 'Ascending',
+        'sort_desc' => 'Descending',
+    ],
+    'filters' => [
+        'search_placeholder' => 'Search articles…',
+        'publication' => 'Publication',
+        'issue' => 'Issue',
+        'author' => 'Author',
+        'all' => 'All',
+        'reset' => 'Reset filters',
     ],
     'pagination' => 'Article pages',
+    'pagination_page_of' => 'Page :current of :last',
 
     'create' => [
         'head_title' => 'New article',
@@ -33,6 +48,13 @@ return [
         'back_to_editor' => 'Back to editor',
         'title' => 'Metadata',
         'breadcrumb' => 'Metadata',
+
+        'author' => [
+            'heading' => 'Author',
+            'description' => 'The author assigned to this article.',
+            'label' => 'Author',
+            'unassigned' => 'No author assigned',
+        ],
 
         'publication' => [
             'heading' => 'Publication',

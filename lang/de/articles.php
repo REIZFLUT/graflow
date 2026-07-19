@@ -17,8 +17,23 @@ return [
         'deadline' => 'Abgabefrist',
         'target_count' => 'Ziel-Zeichen',
         'updated_at' => 'Zuletzt bearbeitet',
+        'columns' => 'Spalten',
+        'actions' => 'Aktionen',
+        'rows_per_page' => 'Zeilen pro Seite',
+        'no_results' => 'Keine Treffer für die gewählten Filter.',
+        'sort_asc' => 'Aufsteigend',
+        'sort_desc' => 'Absteigend',
+    ],
+    'filters' => [
+        'search_placeholder' => 'Artikel suchen…',
+        'publication' => 'Publikation',
+        'issue' => 'Ausgabe',
+        'author' => 'Autor',
+        'all' => 'Alle',
+        'reset' => 'Filter zurücksetzen',
     ],
     'pagination' => 'Artikelseiten',
+    'pagination_page_of' => 'Seite :current von :last',
 
     'create' => [
         'head_title' => 'Neuer Artikel',
@@ -33,6 +48,13 @@ return [
         'back_to_editor' => 'Zum Text-Editor',
         'title' => 'Metadaten',
         'breadcrumb' => 'Metadaten',
+
+        'author' => [
+            'heading' => 'Autor',
+            'description' => 'Die dem Artikel zugewiesene Autorin oder der Autor.',
+            'label' => 'Autor',
+            'unassigned' => 'Kein Autor zugewiesen',
+        ],
 
         'publication' => [
             'heading' => 'Publikation',
