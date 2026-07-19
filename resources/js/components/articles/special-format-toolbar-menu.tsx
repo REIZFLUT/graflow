@@ -7,8 +7,8 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { cn } from '@/lib/utils';
 import type { SpecialFormatDefinition } from '@/lib/tiptap/special-format-definitions';
+import { cn } from '@/lib/utils';
 
 type SpecialFormatToolbarMenuProps = {
     editor: Editor;

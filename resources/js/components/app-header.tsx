@@ -1,8 +1,8 @@
 import { Link, usePage } from '@inertiajs/react';
 import { LayoutGrid, Menu, Search } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
-import GraflowLogo from '@/components/graflow-logo';
 import { Breadcrumbs } from '@/components/breadcrumbs';
+import GraflowLogo from '@/components/graflow-logo';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {

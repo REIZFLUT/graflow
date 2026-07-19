@@ -1,6 +1,6 @@
-import type { Editor } from '@tiptap/react';
-import type { EditorView } from '@tiptap/pm/view';
 import { NodeSelection } from '@tiptap/pm/state';
+import type { EditorView } from '@tiptap/pm/view';
+import type { Editor } from '@tiptap/react';
 import type { ArticleImageAttributes } from '@/lib/tiptap/article-image';
 import type { ArticleMedia } from '@/types';
 

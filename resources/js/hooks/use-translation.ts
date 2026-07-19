@@ -1,5 +1,6 @@
 import { usePage } from '@inertiajs/react';
-import { translate, type ReplaceValues } from '@/lib/i18n';
+import { translate  } from '@/lib/i18n';
+import type {ReplaceValues} from '@/lib/i18n';
 
 export function useTranslation(): {
     t: (key: string, replace?: ReplaceValues) => string;

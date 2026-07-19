@@ -1,9 +1,10 @@
-import type { Editor } from '@tiptap/react';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
+import type { Editor } from '@tiptap/react';
 import {
-    MARGINAL_NOTE_BLOCK_TYPES,
-    type MarginalNoteBlockType,
+    MARGINAL_NOTE_BLOCK_TYPES
+    
 } from '@/lib/tiptap/marginal-note';
+import type {MarginalNoteBlockType} from '@/lib/tiptap/marginal-note';
 
 export type TopLevelBlock = {
     node: ProseMirrorNode;

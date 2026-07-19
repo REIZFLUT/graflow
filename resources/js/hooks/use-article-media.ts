@@ -172,6 +172,7 @@ export function useArticleMedia({
                         ? uploadError.message
                         : t('messages.media.upload_failed');
                 setError(message);
+
                 throw uploadError;
             } finally {
                 setUploading(false);
@@ -239,6 +240,7 @@ export function useArticleMedia({
 
             if (!response.ok) {
                 const payload = (await response.json()) as { message?: string };
+
                 throw new Error(
                     payload.message ?? t('messages.media.delete_failed'),
                 );

@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -7,12 +9,10 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import InputError from '@/components/input-error';
 import { Spinner } from '@/components/ui/spinner';
-import { useTranslation } from '@/hooks/use-translation';
 import type { ArticleMediaFormData } from '@/hooks/use-article-media';
+import { useTranslation } from '@/hooks/use-translation';
 import type { ArticleMedia } from '@/types';
-import { useEffect, useState } from 'react';
 
 type ArticleImageDialogProps = {
     open: boolean;
@@ -65,6 +65,7 @@ export default function ArticleImageDialog({
     const handleSubmit = async () => {
         if (altText.trim() === '' || copyright.trim() === '') {
             setValidationError(t('articles.media.validation_required'));
+
             return;
         }
 
@@ -79,6 +80,7 @@ export default function ArticleImageDialog({
         if (mode === 'upload') {
             if (!file) {
                 setValidationError(t('articles.media.validation_no_file'));
+
                 return;
             }
 
