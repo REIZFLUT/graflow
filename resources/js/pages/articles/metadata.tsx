@@ -104,6 +104,7 @@ export default function ArticlesMetadata({
                     }}
                 >
                     <ArticleMetadataForm
+                        author={article.author}
                         publications={publications}
                         assignedPublicationId={
                             article.publication_issue?.publication_id ?? null

@@ -16,6 +16,7 @@ import { create as createEditorSettingsSet } from '@/routes/editor-settings-sets
 import { edit } from '@/routes/publications';
 import { formatEditorSettingsSetSummary } from '@/types';
 import type {
+    ArticleUser,
     EditorSettingsSet,
     Publication,
     PublicationCategory,
@@ -23,6 +24,7 @@ import type {
 } from '@/types';
 
 type ArticleMetadataFormProps = {
+    author?: ArticleUser | null;
     publications: Publication[];
     assignedPublicationId?: number | null;
     publicationIssueId: number | null;
@@ -50,6 +52,7 @@ type ArticleMetadataFormProps = {
 const NONE_VALUE = '__none__';
 
 export default function ArticleMetadataForm({
+    author = null,
     publications,
     assignedPublicationId = null,
     publicationIssueId,
@@ -199,6 +202,33 @@ export default function ArticleMetadataForm({
 
     return (
         <div className="space-y-8">
+            <section className="space-y-4">
+                <div>
+                    <h3 className="text-base font-medium">
+                        {t('articles.metadata.author.heading')}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                        {t('articles.metadata.author.description')}
+                    </p>
+                </div>
+
+                <div className="grid max-w-lg gap-2">
+                    <Label htmlFor="article-author">
+                        {t('articles.metadata.author.label')}
+                    </Label>
+                    <Input
+                        id="article-author"
+                        type="text"
+                        value={
+                            author?.name ??
+                            t('articles.metadata.author.unassigned')
+                        }
+                        readOnly
+                        disabled
+                    />
+                </div>
+            </section>
+
             <section className="space-y-4">
                 <div>
                     <h3 className="text-base font-medium">

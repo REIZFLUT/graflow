@@ -48,6 +48,7 @@ class ArticleMetadataTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->component('articles/metadata')
                 ->where('article.id', $article->id)
+                ->where('article.author.id', $article->author_id)
                 ->where('article.publication_issue_id', $issue->id)
                 ->where('article.publication_chapter.id', $laterChapter->id)
                 ->where('article.position', 4)

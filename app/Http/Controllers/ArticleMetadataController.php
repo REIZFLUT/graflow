@@ -18,6 +18,7 @@ class ArticleMetadataController extends Controller
         $this->authorize('view', $article);
 
         $article->load([
+            'author',
             'editorSettingsSet',
             'publicationChapter',
             'publicationIssue.chapters',
