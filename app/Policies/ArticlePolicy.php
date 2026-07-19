@@ -90,6 +90,18 @@ class ArticlePolicy
         return $user->role === UserRole::Admin;
     }
 
+    public function unpublish(User $user, Article $article): bool
+    {
+        return $article->status === ArticleStatus::Published
+            && (
+                $user->role === UserRole::Admin
+                || (
+                    $user->role === UserRole::ProductManager
+                    && $user->id === $article->product_manager_id
+                )
+            );
+    }
+
     public function delete(User $user, Article $article): bool
     {
         return $this->manageWorkflow($user, $article);

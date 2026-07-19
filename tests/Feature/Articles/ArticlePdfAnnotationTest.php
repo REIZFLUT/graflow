@@ -63,6 +63,36 @@ class ArticlePdfAnnotationTest extends TestCase
         Storage::disk('local')->assertExists($annotatedPdf->file_path);
     }
 
+    public function test_product_manager_can_annotate_pdf_of_submitted_article(): void
+    {
+        $productManager = User::factory()->productManager()->create();
+        $article = Article::factory()->manuscriptSubmitted()->create([
+            'product_manager_id' => $productManager->id,
+        ]);
+        $parentPdf = ArticlePdf::factory()
+            ->forArticle($article)
+            ->create([
+                'owner_id' => $productManager->id,
+                'kind' => ArticlePdfKind::Generated,
+            ]);
+
+        Storage::disk('local')->put($parentPdf->file_path, '%PDF-1.4 parent');
+
+        $this->actingAs($productManager)
+            ->post(route('articles.pdfs.annotated.store', [
+                'article' => $article,
+                'pdf' => $parentPdf,
+            ]), [
+                'file' => UploadedFile::fake()->create('annotated.pdf', 32, 'application/pdf'),
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('article_pdfs', [
+            'parent_pdf_id' => $parentPdf->id,
+            'kind' => ArticlePdfKind::Annotated->value,
+        ]);
+    }
+
     public function test_other_user_cannot_store_annotated_pdf_copy(): void
     {
         $owner = User::factory()->create();

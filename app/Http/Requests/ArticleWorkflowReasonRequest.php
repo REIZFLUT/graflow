@@ -18,6 +18,7 @@ class ArticleWorkflowReasonRequest extends FormRequest
             'articles.workflow.submit-manuscript' => 'submitManuscript',
             'articles.workflow.complete-editorial-work' => 'completeEditorialWork',
             'articles.workflow.request-revision' => 'requestRevision',
+            'articles.workflow.unpublish' => 'unpublish',
             default => 'manageWorkflow',
         };
 
@@ -33,7 +34,11 @@ class ArticleWorkflowReasonRequest extends FormRequest
     {
         return [
             'reason' => [
-                Rule::requiredIf($this->route()?->getName() === 'articles.workflow.request-revision'),
+                Rule::requiredIf(in_array($this->route()?->getName(), [
+                    'articles.workflow.request-revision',
+                    'articles.workflow.return-to-author',
+                    'articles.workflow.unpublish',
+                ], true)),
                 'nullable',
                 'string',
                 'max:5000',

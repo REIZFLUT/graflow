@@ -70,8 +70,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('start-product-manager-correction');
         Route::post('complete-product-manager-correction', [ArticleWorkflowController::class, 'completeProductManagerCorrection'])
             ->name('complete-product-manager-correction');
+        Route::post('return-to-author', [ArticleWorkflowController::class, 'returnToAuthor'])
+            ->name('return-to-author');
         Route::post('recall', [ArticleWorkflowController::class, 'recall'])
             ->name('recall');
+        Route::post('unpublish', [ArticleWorkflowController::class, 'unpublish'])
+            ->name('unpublish');
         Route::post('mark-ready', [ArticleWorkflowController::class, 'markReady'])
             ->name('mark-ready');
         Route::post('publish', [ArticleWorkflowController::class, 'publish'])

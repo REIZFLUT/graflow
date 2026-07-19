@@ -218,6 +218,7 @@ class ArticleController extends Controller
                 'request_revision' => Gate::allows('requestRevision', $article),
                 'manage_workflow' => $canManageWorkflow,
                 'force_status' => $canForceStatus,
+                'unpublish' => Gate::allows('unpublish', $article),
                 'delete' => Gate::allows('delete', $article),
                 'comment' => Gate::allows('comment', $article),
             ],
@@ -308,6 +309,10 @@ class ArticleController extends Controller
             $actions[] = 'force_status';
         }
 
+        if (Gate::allows('unpublish', $article)) {
+            $actions[] = 'unpublish';
+        }
+
         if (! Gate::allows('manageWorkflow', $article)) {
             return $actions;
         }
@@ -318,6 +323,7 @@ class ArticleController extends Controller
                 ArticleStatus::Planned => ['assign_author'],
                 ArticleStatus::ManuscriptSubmitted, ArticleStatus::RevisionRequested => [
                     'start_product_manager_correction',
+                    'return_to_author',
                     'assign_author',
                     'assign_editorial',
                     'mark_ready',
@@ -326,7 +332,13 @@ class ArticleController extends Controller
                     'complete_product_manager_correction',
                 ],
                 ArticleStatus::EditorialWork => ['recall', 'mark_ready'],
-                ArticleStatus::ReadyForPublication => ['assign_author', 'assign_editorial', 'publish'],
+                ArticleStatus::ReadyForPublication => [
+                    'start_product_manager_correction',
+                    'return_to_author',
+                    'assign_author',
+                    'assign_editorial',
+                    'publish',
+                ],
                 default => [],
             },
         ];

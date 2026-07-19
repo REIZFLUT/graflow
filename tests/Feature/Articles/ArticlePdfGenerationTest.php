@@ -63,6 +63,41 @@ class ArticlePdfGenerationTest extends TestCase
             ->assertSessionHasErrors('file');
     }
 
+    public function test_product_manager_can_store_pdf_for_submitted_article_without_being_assignee(): void
+    {
+        $productManager = User::factory()->productManager()->create();
+        $article = Article::factory()->manuscriptSubmitted()->create([
+            'product_manager_id' => $productManager->id,
+        ]);
+
+        $this->actingAs($productManager)
+            ->post(route('articles.pdfs.store', $article), [
+                'file' => UploadedFile::fake()->create('fahne.pdf', 100, 'application/pdf'),
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('article_pdfs', [
+            'article_id' => $article->id,
+            'owner_id' => $productManager->id,
+        ]);
+    }
+
+    public function test_former_participant_can_store_pdf_of_published_article(): void
+    {
+        $editor = User::factory()->editor()->create();
+        $article = Article::factory()->published()->create();
+        $article->participants()->create([
+            'user_id' => $editor->id,
+            'process_role' => $editor->role->value,
+        ]);
+
+        $this->actingAs($editor)
+            ->post(route('articles.pdfs.store', $article), [
+                'file' => UploadedFile::fake()->create('archiv.pdf', 100, 'application/pdf'),
+            ])
+            ->assertRedirect();
+    }
+
     public function test_other_user_cannot_store_article_pdf(): void
     {
         $owner = User::factory()->create();

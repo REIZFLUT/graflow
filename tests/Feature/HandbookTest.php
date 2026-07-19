@@ -47,6 +47,26 @@ class HandbookTest extends TestCase
             );
     }
 
+    public function test_reader_disables_marginal_column_but_keeps_serif_font(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $issue = Handbook::resolveIssue();
+
+        Article::factory()->create([
+            'title' => 'Kapitelübersicht',
+            'publication_issue_id' => $issue->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('handbook.show'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('handbook/reader')
+                ->where('articles.0.editor_settings.has_marginal_column', false)
+                ->where('articles.0.editor_settings.font', 'spectral')
+            );
+    }
+
     public function test_handbook_publication_is_hidden_from_non_admin_publication_list(): void
     {
         User::factory()->admin()->create();

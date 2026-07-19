@@ -129,6 +129,32 @@ class ArticleWorkflowController extends Controller
         return to_route('articles.edit', $article);
     }
 
+    public function returnToAuthor(
+        ArticleWorkflowReasonRequest $request,
+        Article $article,
+    ): RedirectResponse {
+        $this->workflow->returnToAuthor(
+            $article,
+            $request->user(),
+            $request->validated('reason'),
+        );
+
+        return to_route('articles.edit', $article);
+    }
+
+    public function unpublish(
+        ArticleWorkflowReasonRequest $request,
+        Article $article,
+    ): RedirectResponse {
+        $this->workflow->unpublish(
+            $article,
+            $request->user(),
+            $request->validated('reason'),
+        );
+
+        return to_route('articles.edit', $article);
+    }
+
     public function recall(
         ArticleWorkflowReasonRequest $request,
         Article $article,

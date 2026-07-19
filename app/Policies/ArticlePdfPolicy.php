@@ -14,7 +14,7 @@ class ArticlePdfPolicy
 
     public function update(User $user, ArticlePdf $articlePdf): bool
     {
-        return $user->can('updateContent', $articlePdf->article);
+        return $user->can('view', $articlePdf->article);
     }
 
     public function delete(User $user, ArticlePdf $articlePdf): bool

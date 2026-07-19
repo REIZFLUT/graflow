@@ -111,8 +111,45 @@ class ArticleEditorWorkflowPropsTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('capabilities.force_status', true)
-                ->where('allowedActions', ['force_status'])
+                ->where('capabilities.unpublish', true)
+                ->where('allowedActions', ['force_status', 'unpublish'])
                 ->has('editorialStaff', 1));
+    }
+
+    public function test_product_manager_receives_return_and_correction_actions_for_submitted_manuscript(): void
+    {
+        $productManager = User::factory()->productManager()->create();
+        $article = Article::factory()->manuscriptSubmitted()->create([
+            'product_manager_id' => $productManager->id,
+        ]);
+
+        $this->actingAs($productManager)
+            ->get(route('articles.edit', $article))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('allowedActions', [
+                    'start_product_manager_correction',
+                    'return_to_author',
+                    'assign_author',
+                    'assign_editorial',
+                    'mark_ready',
+                ]));
+    }
+
+    public function test_product_manager_receives_unpublish_action_for_own_published_article(): void
+    {
+        $productManager = User::factory()->productManager()->create();
+        $article = Article::factory()->published()->create([
+            'product_manager_id' => $productManager->id,
+        ]);
+
+        $this->actingAs($productManager)
+            ->get(route('articles.edit', $article))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('capabilities.unpublish', true)
+                ->where('capabilities.manage_workflow', false)
+                ->where('allowedActions', ['unpublish']));
     }
 
     public function test_editor_receives_workflow_events_with_reason(): void

@@ -63,7 +63,10 @@ class HandbookController extends Controller
             'position' => $article->position,
             'content' => $article->content,
             'media' => ArticleMediaResource::collection($article->media)->resolve(),
-            'editor_settings' => $this->editorSettingsResolver->resolve($article),
+            'editor_settings' => [
+                ...$this->editorSettingsResolver->resolve($article),
+                'has_marginal_column' => false,
+            ],
         ]);
 
         return Inertia::render('handbook/reader', [

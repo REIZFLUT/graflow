@@ -356,6 +356,129 @@ class ArticleWorkflowTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_product_manager_can_return_submitted_manuscript_to_author(): void
+    {
+        $productManager = User::factory()->productManager()->create();
+        $author = User::factory()->author()->create();
+        $article = Article::factory()->manuscriptSubmitted()->create([
+            'owner_id' => $author->id,
+            'product_manager_id' => $productManager->id,
+            'author_id' => $author->id,
+        ]);
+
+        $this->actingAs($productManager)
+            ->post(route('articles.workflow.return-to-author', $article))
+            ->assertSessionHasErrors('reason');
+
+        $this->actingAs($productManager)
+            ->post(route('articles.workflow.return-to-author', $article), [
+                'reason' => 'Bitte Abschnitt 2 kürzen.',
+            ])
+            ->assertRedirect(route('articles.edit', $article));
+
+        $article->refresh();
+        $this->assertSame(ArticleStatus::Revision, $article->status);
+        $this->assertSame($author->id, $article->current_assignee_id);
+        $this->assertDatabaseHas('article_workflow_events', [
+            'article_id' => $article->id,
+            'from_status' => ArticleStatus::ManuscriptSubmitted->value,
+            'to_status' => ArticleStatus::Revision->value,
+            'actor_id' => $productManager->id,
+            'assignee_id' => $author->id,
+            'reason' => 'Bitte Abschnitt 2 kürzen.',
+        ]);
+    }
+
+    public function test_unrelated_product_manager_cannot_return_manuscript_to_author(): void
+    {
+        $otherProductManager = User::factory()->productManager()->create();
+        $article = Article::factory()->manuscriptSubmitted()->create();
+
+        $this->actingAs($otherProductManager)
+            ->post(route('articles.workflow.return-to-author', $article), [
+                'reason' => 'Nicht meine Baustelle.',
+            ])
+            ->assertForbidden();
+
+        $this->assertSame(ArticleStatus::ManuscriptSubmitted, $article->refresh()->status);
+    }
+
+    public function test_product_manager_can_unpublish_own_article(): void
+    {
+        $productManager = User::factory()->productManager()->create();
+        $article = Article::factory()->published()->create([
+            'product_manager_id' => $productManager->id,
+        ]);
+
+        $this->actingAs($productManager)
+            ->post(route('articles.workflow.unpublish', $article))
+            ->assertSessionHasErrors('reason');
+
+        $this->actingAs($productManager)
+            ->post(route('articles.workflow.unpublish', $article), [
+                'reason' => 'Fehler im Beitrag entdeckt.',
+            ])
+            ->assertRedirect(route('articles.edit', $article));
+
+        $article->refresh();
+        $this->assertSame(ArticleStatus::ReadyForPublication, $article->status);
+        $this->assertNull($article->published_at);
+        $this->assertNull($article->current_assignee_id);
+        $this->assertDatabaseHas('article_workflow_events', [
+            'article_id' => $article->id,
+            'from_status' => ArticleStatus::Published->value,
+            'to_status' => ArticleStatus::ReadyForPublication->value,
+            'actor_id' => $productManager->id,
+            'reason' => 'Fehler im Beitrag entdeckt.',
+        ]);
+    }
+
+    public function test_only_responsible_product_manager_or_admin_can_unpublish(): void
+    {
+        $otherProductManager = User::factory()->productManager()->create();
+        $author = User::factory()->author()->create();
+        $article = Article::factory()->published()->create([
+            'author_id' => $author->id,
+            'owner_id' => $author->id,
+        ]);
+
+        $this->actingAs($otherProductManager)
+            ->post(route('articles.workflow.unpublish', $article), ['reason' => 'Test'])
+            ->assertForbidden();
+
+        $this->actingAs($author)
+            ->post(route('articles.workflow.unpublish', $article), ['reason' => 'Test'])
+            ->assertForbidden();
+
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)
+            ->post(route('articles.workflow.unpublish', $article), [
+                'reason' => 'Administrativ zurückgezogen.',
+            ])
+            ->assertRedirect(route('articles.edit', $article));
+
+        $this->assertSame(ArticleStatus::ReadyForPublication, $article->refresh()->status);
+    }
+
+    public function test_product_manager_can_start_correction_from_ready_for_publication(): void
+    {
+        $productManager = User::factory()->productManager()->create();
+        $article = Article::factory()->readyForPublication()->create([
+            'product_manager_id' => $productManager->id,
+        ]);
+
+        $this->actingAs($productManager)
+            ->post(route('articles.workflow.start-product-manager-correction', $article), [
+                'reason' => 'Tippfehler kurz vor Veröffentlichung.',
+            ])
+            ->assertRedirect(route('articles.edit', $article));
+
+        $article->refresh();
+        $this->assertSame(ArticleStatus::ProductManagerCorrection, $article->status);
+        $this->assertSame($productManager->id, $article->current_assignee_id);
+    }
+
     public function test_author_revision_request_stays_locked_until_product_manager_assigns_rework(): void
     {
         $productManager = User::factory()->productManager()->create();

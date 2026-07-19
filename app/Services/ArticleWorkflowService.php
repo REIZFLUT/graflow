@@ -252,6 +252,64 @@ class ArticleWorkflowService
         });
     }
 
+    public function returnToAuthor(Article $article, User $actor, string $reason): Article
+    {
+        return DB::transaction(function () use ($article, $actor, $reason): Article {
+            $lockedArticle = $this->lock($article);
+            $this->ensureWorkflowManager($lockedArticle, $actor);
+
+            if (! in_array($lockedArticle->status, [
+                ArticleStatus::ManuscriptSubmitted,
+                ArticleStatus::RevisionRequested,
+                ArticleStatus::ReadyForPublication,
+            ], true)) {
+                throw ValidationException::withMessages([
+                    'status' => __('This workflow transition is not allowed.'),
+                ]);
+            }
+
+            $author = $lockedArticle->author;
+
+            if ($author === null || $author->role !== UserRole::Author) {
+                throw ValidationException::withMessages([
+                    'status' => __('An author is required for this status.'),
+                ]);
+            }
+
+            return $this->applyTransition(
+                $lockedArticle,
+                $actor,
+                ArticleStatus::Revision,
+                $author,
+                $reason,
+            );
+        });
+    }
+
+    public function unpublish(Article $article, User $actor, string $reason): Article
+    {
+        return DB::transaction(function () use ($article, $actor, $reason): Article {
+            $lockedArticle = $this->lock($article);
+            $this->ensureWorkflowManager($lockedArticle, $actor);
+
+            if ($lockedArticle->status !== ArticleStatus::Published) {
+                throw ValidationException::withMessages([
+                    'status' => __('This workflow transition is not allowed.'),
+                ]);
+            }
+
+            $lockedArticle->published_at = null;
+
+            return $this->applyTransition(
+                $lockedArticle,
+                $actor,
+                ArticleStatus::ReadyForPublication,
+                null,
+                $reason,
+            );
+        });
+    }
+
     public function startProductManagerCorrection(
         Article $article,
         User $actor,
@@ -264,6 +322,7 @@ class ArticleWorkflowService
             if (! in_array($lockedArticle->status, [
                 ArticleStatus::ManuscriptSubmitted,
                 ArticleStatus::RevisionRequested,
+                ArticleStatus::ReadyForPublication,
             ], true)) {
                 throw ValidationException::withMessages([
                     'status' => __('This workflow transition is not allowed.'),
