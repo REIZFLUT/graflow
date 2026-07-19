@@ -1,14 +1,15 @@
-import type { JSONContent } from '@tiptap/core';
 import { Image, Text, View } from '@react-pdf/renderer';
+import type { JSONContent } from '@tiptap/core';
 import type { ReactNode } from 'react';
 import {
-    footnoteIndexForId,
-    type CollectedFootnote,
+    footnoteIndexForId
+    
 } from '@/lib/article-pdf/footnotes';
-import { toSuperscriptNumber } from '@/lib/article-pdf/superscript';
+import type {CollectedFootnote} from '@/lib/article-pdf/footnotes';
 import { toPdfImageSource } from '@/lib/article-pdf/image-source';
 import { mathImageDimensions } from '@/lib/article-pdf/math-image-style';
 import type { ArticlePdfStyles } from '@/lib/article-pdf/styles';
+import { toSuperscriptNumber } from '@/lib/article-pdf/superscript';
 import type { ArticleMedia } from '@/types';
 
 type RenderContext = {

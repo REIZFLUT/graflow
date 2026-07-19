@@ -4,9 +4,9 @@ import ArticlePdfViewer from '@/components/articles/article-pdf-viewer';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/hooks/use-translation';
 import { edit as editArticle } from '@/routes/articles';
-import { store as storeAnnotatedPdf } from '@/routes/articles/pdfs/annotated';
-import { show as showArticlePdf } from '@/routes/articles/pdfs';
 import { index } from '@/routes/articles';
+import { show as showArticlePdf } from '@/routes/articles/pdfs';
+import { store as storeAnnotatedPdf } from '@/routes/articles/pdfs/annotated';
 import type { ArticlePdf } from '@/types';
 
 type PageProps = {

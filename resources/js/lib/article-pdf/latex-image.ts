@@ -1,5 +1,5 @@
-import katex from 'katex';
 import { toCanvas } from 'html-to-image';
+import katex from 'katex';
 import 'katex/dist/katex.min.css';
 
 /** Matches PDF body font size; KaTeX scales math to 1.21× em per spec. */

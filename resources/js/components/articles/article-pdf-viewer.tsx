@@ -2,10 +2,11 @@ import {
     AnnotationPlugin,
     DocumentManagerPlugin,
     ExportPlugin,
-    PDFViewer,
-    type PDFViewerRef,
-    type PluginRegistry,
+    PDFViewer
+    
+    
 } from '@embedpdf/react-pdf-viewer';
+import type {PDFViewerRef, PluginRegistry} from '@embedpdf/react-pdf-viewer';
 import { Save } from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';

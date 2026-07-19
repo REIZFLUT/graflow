@@ -1,5 +1,5 @@
-import type { JSONContent } from '@tiptap/core';
 import { Document, Page, Text, View } from '@react-pdf/renderer';
+import type { JSONContent } from '@tiptap/core';
 import { collectFootnotes } from '@/lib/article-pdf/footnotes';
 import { renderTipTapNode } from '@/lib/article-pdf/render-content';
 import { createArticlePdfStyles } from '@/lib/article-pdf/styles';
