@@ -11,6 +11,7 @@ return [
     'log_out' => 'Abmelden',
     'profile' => 'Profil',
     'security' => 'Sicherheit',
+    'notifications' => 'Benachrichtigungen',
     'appearance' => 'Erscheinungsbild',
     'repository' => 'Repository',
     'documentation' => 'Dokumentation',

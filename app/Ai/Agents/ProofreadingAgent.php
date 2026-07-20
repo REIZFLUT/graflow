@@ -51,6 +51,14 @@ class ProofreadingAgent implements Agent, HasProviderOptions, HasStructuredOutpu
         Kommafehler werden bereits von einem separaten Werkzeug (LanguageTool) erkannt und
         sollen von dir IGNORIERT werden.
 
+        Mathematische Formeln sind im Text als LaTeX-Quelltext eingebettet: inline in der
+        Form \(...\) und als abgesetzte Formel in der Form \[...\]. Behandle diese Formeln als
+        vollwertigen, sinntragenden Satzbestandteil (z. B. wie ein Nomen oder eine Zahl). Ein Satz,
+        der eine solche Formel enthält, ist NICHT unvollständig oder abgebrochen, nur weil dort eine
+        Formel statt Fließtext steht. Bewerte die LaTeX-Syntax selbst nicht und melde sie nicht als
+        Auffälligkeit; ziehe eine Formel nur dann in ein Zitat mit ein, wenn sie zur betroffenen
+        Textstelle gehört.
+
         Achte ausschließlich auf sprachliche und inhaltlich-logische Auffälligkeiten:
         - unfertige, abgebrochene oder unvollständige Sätze
         - unlogische, widersprüchliche oder inhaltlich unklare Sätze

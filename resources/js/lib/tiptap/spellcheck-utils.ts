@@ -48,6 +48,34 @@ export type PlainTextExtraction = {
     offsetToPos: (offset: number) => number | null;
 };
 
+/**
+ * Controls how KaTeX math nodes (`inlineMath`/`blockMath`) are represented in
+ * the extracted plain text.
+ *
+ * - `skip`: formulas are omitted (default). Used for LanguageTool spell checking
+ *   so raw LaTeX is never flagged as a spelling mistake.
+ * - `latex`: formulas are rendered as their LaTeX source wrapped in `\(...\)`
+ *   (inline) or `\[...\]` (block). This keeps sentences syntactically complete
+ *   for the AI proofreader, which would otherwise treat a sentence with a
+ *   removed formula as unfinished.
+ */
+export type MathExtractionMode = 'skip' | 'latex';
+
+export type ExtractPlainTextOptions = {
+    math?: MathExtractionMode;
+};
+
+function formatMathLatex(node: ProseMirrorNode, displayMode: boolean): string | null {
+    const latex =
+        typeof node.attrs?.latex === 'string' ? node.attrs.latex.trim() : '';
+
+    if (latex === '') {
+        return null;
+    }
+
+    return displayMode ? `\\[${latex}\\]` : `\\(${latex}\\)`;
+}
+
 export function categoryClassFromId(categoryId: string): SpellCheckCategoryClass {
     const normalized = categoryId.toUpperCase();
 
@@ -62,7 +90,11 @@ export function categoryClassFromId(categoryId: string): SpellCheckCategoryClass
     return 'style';
 }
 
-export function extractPlainTextWithMap(doc: ProseMirrorNode): PlainTextExtraction {
+export function extractPlainTextWithMap(
+    doc: ProseMirrorNode,
+    options: ExtractPlainTextOptions = {},
+): PlainTextExtraction {
+    const mathMode: MathExtractionMode = options.math ?? 'skip';
     const ranges: PlainTextRange[] = [];
     let text = '';
     let needsSeparator = false;
@@ -76,20 +108,28 @@ export function extractPlainTextWithMap(doc: ProseMirrorNode): PlainTextExtracti
             needsSeparator = true;
 
             node.forEach((child, offset) => {
-                if (!child.isText || !child.text) {
+                if (child.isText && child.text) {
+                    const posFrom = pos + 1 + offset;
+                    const plainFrom = text.length;
+                    text += child.text;
+
+                    ranges.push({
+                        plainFrom,
+                        plainTo: text.length,
+                        posFrom,
+                        posTo: posFrom + child.text.length,
+                    });
+
                     return;
                 }
 
-                const posFrom = pos + 1 + offset;
-                const plainFrom = text.length;
-                text += child.text;
+                if (mathMode === 'latex' && child.type.name === 'inlineMath') {
+                    const formatted = formatMathLatex(child, false);
 
-                ranges.push({
-                    plainFrom,
-                    plainTo: text.length,
-                    posFrom,
-                    posTo: posFrom + child.text.length,
-                });
+                    if (formatted !== null) {
+                        text += formatted;
+                    }
+                }
             });
 
             return false;
@@ -101,6 +141,14 @@ export function extractPlainTextWithMap(doc: ProseMirrorNode): PlainTextExtracti
             }
 
             needsSeparator = true;
+
+            if (mathMode === 'latex' && node.type.name === 'blockMath') {
+                const formatted = formatMathLatex(node, true);
+
+                if (formatted !== null) {
+                    text += formatted;
+                }
+            }
 
             return false;
         }

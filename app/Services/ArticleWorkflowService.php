@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\ArticleStatus;
 use App\Enums\UserRole;
+use App\Events\ArticleStatusChanged;
 use App\Models\Article;
 use App\Models\PublicationIssue;
 use App\Models\User;
@@ -61,6 +62,8 @@ class ArticleWorkflowService
             $this->recordParticipant($article, $actor);
             $this->recordParticipant($article, $author);
             $this->recordEvent($article, null, ArticleStatus::Planned, $actor, $author);
+
+            ArticleStatusChanged::dispatch($article, null, ArticleStatus::Planned, $actor, null);
 
             return $article->refresh();
         });
@@ -319,15 +322,13 @@ class ArticleWorkflowService
             $lockedArticle = $this->lock($article);
             $this->ensureWorkflowManager($lockedArticle, $actor);
 
-            if (! in_array($lockedArticle->status, [
-                ArticleStatus::ManuscriptSubmitted,
-                ArticleStatus::RevisionRequested,
-                ArticleStatus::ReadyForPublication,
-            ], true)) {
+            if ($lockedArticle->status === ArticleStatus::ProductManagerCorrection) {
                 throw ValidationException::withMessages([
                     'status' => __('This workflow transition is not allowed.'),
                 ]);
             }
+
+            $lockedArticle->published_at = null;
 
             return $this->applyTransition(
                 $lockedArticle,
@@ -359,10 +360,22 @@ class ArticleWorkflowService
         return $this->transition(
             $article,
             $actor,
-            [ArticleStatus::EditorialWork],
+            [
+                ArticleStatus::Planned,
+                ArticleStatus::Authoring,
+                ArticleStatus::ProductManagerCorrection,
+                ArticleStatus::RevisionRequested,
+                ArticleStatus::Revision,
+                ArticleStatus::EditorialWork,
+                ArticleStatus::ReadyForPublication,
+                ArticleStatus::Published,
+            ],
             ArticleStatus::ManuscriptSubmitted,
             null,
             $reason,
+            function (Article $lockedArticle): void {
+                $lockedArticle->published_at = null;
+            },
         );
     }
 
@@ -457,6 +470,8 @@ class ArticleWorkflowService
         }
 
         $this->recordEvent($article, $from, $to, $actor, $assignee, $reason);
+
+        ArticleStatusChanged::dispatch($article, $from, $to, $actor, $assignee, $reason);
 
         return $article->refresh();
     }

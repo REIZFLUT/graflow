@@ -31,6 +31,9 @@ return [
         'author' => 'Author',
         'all' => 'All',
         'reset' => 'Reset filters',
+        'archive' => 'Archive',
+        'active' => 'Tasks',
+        'empty_archive' => 'No published articles in the archive.',
     ],
     'pagination' => 'Article pages',
     'pagination_page_of' => 'Page :current of :last',
@@ -120,6 +123,7 @@ return [
         'assignee' => 'Assignee',
         'assignee_placeholder' => 'Select a person',
         'status' => 'Status',
+        'actions_menu' => 'Actions',
         'reason' => 'Reason',
         'reason_placeholder' => 'Add context for this workflow step…',
         'optional' => '(optional)',
@@ -143,6 +147,7 @@ return [
             'recall' => 'Recall',
             'mark_ready' => 'Mark ready',
             'publish' => 'Publish',
+            'unpublish' => 'Unpublish',
             'start_product_manager_correction' => 'Start correction',
             'complete_product_manager_correction' => 'Finish correction',
         ],
@@ -182,6 +187,10 @@ return [
             'publish' => [
                 'title' => 'Publish article?',
                 'description' => 'Publishing locks the article and all mutation controls.',
+            ],
+            'unpublish' => [
+                'title' => 'Unpublish article?',
+                'description' => 'The article is taken out of publication and can be edited again. A reason is required.',
             ],
             'start_product_manager_correction' => [
                 'title' => 'Start product manager correction?',

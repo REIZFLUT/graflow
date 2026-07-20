@@ -572,6 +572,125 @@ class ArticleWorkflowTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_product_manager_can_recall_article_from_every_status(): void
+    {
+        $recallableStatuses = [
+            ArticleStatus::Planned,
+            ArticleStatus::Authoring,
+            ArticleStatus::ProductManagerCorrection,
+            ArticleStatus::RevisionRequested,
+            ArticleStatus::Revision,
+            ArticleStatus::EditorialWork,
+            ArticleStatus::ReadyForPublication,
+            ArticleStatus::Published,
+        ];
+
+        foreach ($recallableStatuses as $status) {
+            $productManager = User::factory()->productManager()->create();
+            $author = User::factory()->author()->create();
+            $article = Article::factory()->create([
+                'owner_id' => $author->id,
+                'product_manager_id' => $productManager->id,
+                'author_id' => $author->id,
+                'status' => $status,
+                'current_assignee_id' => $status === ArticleStatus::EditorialWork
+                    ? User::factory()->editor()->create()->id
+                    : null,
+                'published_at' => $status === ArticleStatus::Published ? now() : null,
+            ]);
+
+            $this->actingAs($productManager)
+                ->post(route('articles.workflow.recall', $article), [
+                    'reason' => 'Zurückgeholt aus '.$status->value,
+                ])
+                ->assertRedirect(route('articles.edit', $article));
+
+            $article->refresh();
+            $this->assertSame(ArticleStatus::ManuscriptSubmitted, $article->status, $status->value);
+            $this->assertNull($article->current_assignee_id, $status->value);
+            $this->assertNull($article->published_at, $status->value);
+            $this->assertDatabaseHas('article_workflow_events', [
+                'article_id' => $article->id,
+                'from_status' => $status->value,
+                'to_status' => ArticleStatus::ManuscriptSubmitted->value,
+                'actor_id' => $productManager->id,
+            ]);
+        }
+    }
+
+    public function test_product_manager_cannot_recall_already_submitted_manuscript(): void
+    {
+        $productManager = User::factory()->productManager()->create();
+        $article = Article::factory()->manuscriptSubmitted()->create([
+            'product_manager_id' => $productManager->id,
+        ]);
+
+        $this->actingAs($productManager)
+            ->post(route('articles.workflow.recall', $article), [
+                'reason' => 'Bereits eingereicht.',
+            ])
+            ->assertForbidden();
+
+        $this->assertSame(ArticleStatus::ManuscriptSubmitted, $article->refresh()->status);
+    }
+
+    public function test_product_manager_can_start_correction_from_every_status(): void
+    {
+        $correctableStatuses = [
+            ArticleStatus::Planned,
+            ArticleStatus::Authoring,
+            ArticleStatus::ManuscriptSubmitted,
+            ArticleStatus::RevisionRequested,
+            ArticleStatus::Revision,
+            ArticleStatus::EditorialWork,
+            ArticleStatus::ReadyForPublication,
+            ArticleStatus::Published,
+        ];
+
+        foreach ($correctableStatuses as $status) {
+            $productManager = User::factory()->productManager()->create();
+            $author = User::factory()->author()->create();
+            $article = Article::factory()->create([
+                'owner_id' => $author->id,
+                'product_manager_id' => $productManager->id,
+                'author_id' => $author->id,
+                'status' => $status,
+                'current_assignee_id' => $status === ArticleStatus::EditorialWork
+                    ? User::factory()->editor()->create()->id
+                    : null,
+                'published_at' => $status === ArticleStatus::Published ? now() : null,
+            ]);
+
+            $this->actingAs($productManager)
+                ->post(route('articles.workflow.start-product-manager-correction', $article), [
+                    'reason' => 'Eigenkorrektur aus '.$status->value,
+                ])
+                ->assertRedirect(route('articles.edit', $article));
+
+            $article->refresh();
+            $this->assertSame(ArticleStatus::ProductManagerCorrection, $article->status, $status->value);
+            $this->assertSame($productManager->id, $article->current_assignee_id, $status->value);
+            $this->assertNull($article->published_at, $status->value);
+        }
+    }
+
+    public function test_product_manager_cannot_start_correction_when_already_in_correction(): void
+    {
+        $productManager = User::factory()->productManager()->create();
+        $article = Article::factory()->productManagerCorrection()->create([
+            'product_manager_id' => $productManager->id,
+            'current_assignee_id' => $productManager->id,
+        ]);
+
+        $this->actingAs($productManager)
+            ->post(route('articles.workflow.start-product-manager-correction', $article), [
+                'reason' => 'Bereits in Korrektur.',
+            ])
+            ->assertForbidden();
+
+        $this->assertSame(ArticleStatus::ProductManagerCorrection, $article->refresh()->status);
+    }
+
     public function test_involved_people_keep_read_access_but_outsiders_do_not(): void
     {
         $productManager = User::factory()->productManager()->create();

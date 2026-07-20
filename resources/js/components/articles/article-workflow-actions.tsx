@@ -1,4 +1,5 @@
 import { Form } from '@inertiajs/react';
+import { ChevronDown } from 'lucide-react';
 import { useState } from 'react';
 import ArticleWorkflowController from '@/actions/App/Http/Controllers/ArticleWorkflowController';
 import InputError from '@/components/input-error';
@@ -11,8 +12,13 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
 import {
     Select,
@@ -43,7 +49,39 @@ type WorkflowForm = {
     method: 'post';
 };
 
-type WorkflowActionDialogProps = {
+type ControlledDialogProps = {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+};
+
+const ACTION_ORDER: ArticleWorkflowAction[] = [
+    'submit_manuscript',
+    'complete_editorial_work',
+    'request_revision',
+    'force_status',
+    'assign_author',
+    'assign_editorial',
+    'recall',
+    'mark_ready',
+    'start_product_manager_correction',
+    'complete_product_manager_correction',
+    'publish',
+    'unpublish',
+];
+
+const REASON_REQUIRED_ACTIONS: ArticleWorkflowAction[] = [
+    'request_revision',
+    'unpublish',
+];
+
+const DESTRUCTIVE_ACTIONS: ArticleWorkflowAction[] = ['publish', 'unpublish'];
+
+const ASSIGNMENT_ACTIONS: ArticleWorkflowAction[] = [
+    'assign_author',
+    'assign_editorial',
+];
+
+type WorkflowActionDialogProps = ControlledDialogProps & {
     action: ArticleWorkflowAction;
     form: WorkflowForm;
     reasonRequired?: boolean;
@@ -55,20 +93,13 @@ function WorkflowActionDialog({
     form,
     reasonRequired = false,
     destructive = false,
+    open,
+    onOpenChange,
 }: WorkflowActionDialogProps) {
     const { t } = useTranslation();
 
     return (
-        <Dialog>
-            <DialogTrigger asChild>
-                <Button
-                    type="button"
-                    size="sm"
-                    variant={destructive ? 'destructive' : 'outline'}
-                >
-                    {t(`articles.workflow.actions.${action}`)}
-                </Button>
-            </DialogTrigger>
+        <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>
@@ -79,7 +110,11 @@ function WorkflowActionDialog({
                     </DialogDescription>
                 </DialogHeader>
 
-                <Form {...form} options={{ preserveScroll: true }}>
+                <Form
+                    {...form}
+                    options={{ preserveScroll: true }}
+                    onSuccess={() => onOpenChange(false)}
+                >
                     {({ errors, processing }) => (
                         <div className="space-y-4">
                             <div className="grid gap-2">
@@ -128,25 +163,24 @@ function WorkflowActionDialog({
     );
 }
 
+type AssignmentDialogProps = ControlledDialogProps & {
+    action: 'assign_author' | 'assign_editorial';
+    form: WorkflowForm;
+    users: ArticleWorkflowUser[];
+};
+
 function AssignmentDialog({
     action,
     form,
     users,
-}: {
-    action: 'assign_author' | 'assign_editorial';
-    form: WorkflowForm;
-    users: ArticleWorkflowUser[];
-}) {
+    open,
+    onOpenChange,
+}: AssignmentDialogProps) {
     const { t } = useTranslation();
     const [assigneeId, setAssigneeId] = useState('');
 
     return (
-        <Dialog>
-            <DialogTrigger asChild>
-                <Button type="button" size="sm" variant="outline">
-                    {t(`articles.workflow.actions.${action}`)}
-                </Button>
-            </DialogTrigger>
+        <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>
@@ -157,7 +191,11 @@ function AssignmentDialog({
                     </DialogDescription>
                 </DialogHeader>
 
-                <Form {...form} options={{ preserveScroll: true }}>
+                <Form
+                    {...form}
+                    options={{ preserveScroll: true }}
+                    onSuccess={() => onOpenChange(false)}
+                >
                     {({ errors, processing }) => (
                         <div className="space-y-4">
                             <div className="grid gap-2">
@@ -254,25 +292,24 @@ const articleStatuses: ArticleStatus[] = [
     'published',
 ];
 
+type ForceStatusDialogProps = ControlledDialogProps & {
+    form: WorkflowForm;
+    editorialStaff: ArticleWorkflowUser[];
+};
+
 function ForceStatusDialog({
     form,
     editorialStaff,
-}: {
-    form: WorkflowForm;
-    editorialStaff: ArticleWorkflowUser[];
-}) {
+    open,
+    onOpenChange,
+}: ForceStatusDialogProps) {
     const { t } = useTranslation();
     const [status, setStatus] = useState<ArticleStatus>('planned');
     const [assigneeId, setAssigneeId] = useState('');
     const needsEditorialAssignee = status === 'editorial_work';
 
     return (
-        <Dialog>
-            <DialogTrigger asChild>
-                <Button type="button" size="sm" variant="outline">
-                    {t('articles.workflow.actions.force_status')}
-                </Button>
-            </DialogTrigger>
+        <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>
@@ -285,7 +322,11 @@ function ForceStatusDialog({
                     </DialogDescription>
                 </DialogHeader>
 
-                <Form {...form} options={{ preserveScroll: true }}>
+                <Form
+                    {...form}
+                    options={{ preserveScroll: true }}
+                    onSuccess={() => onOpenChange(false)}
+                >
                     {({ errors, processing }) => (
                         <div className="space-y-4">
                             <div className="grid gap-2">
@@ -421,6 +462,10 @@ export default function ArticleWorkflowActions({
     authors,
     editorialStaff,
 }: ArticleWorkflowActionsProps) {
+    const { t } = useTranslation();
+    const [activeAction, setActiveAction] =
+        useState<ArticleWorkflowAction | null>(null);
+
     const isAllowed = (action: ArticleWorkflowAction): boolean => {
         if (!allowedActions.includes(action)) {
             return false;
@@ -442,107 +487,133 @@ export default function ArticleWorkflowActions({
             return capabilities.force_status;
         }
 
+        if (action === 'unpublish') {
+            return capabilities.unpublish;
+        }
+
+        if (
+            action === 'recall' ||
+            action === 'start_product_manager_correction'
+        ) {
+            return true;
+        }
+
         return capabilities.manage_workflow;
     };
 
+    const visibleActions = ACTION_ORDER.filter(isAllowed);
+
+    if (visibleActions.length === 0) {
+        return null;
+    }
+
+    const workflowFormFor = (action: ArticleWorkflowAction): WorkflowForm => {
+        const params = { article: articleId };
+
+        switch (action) {
+            case 'submit_manuscript':
+                return ArticleWorkflowController.submitManuscript.form(params);
+            case 'complete_editorial_work':
+                return ArticleWorkflowController.completeEditorialWork.form(
+                    params,
+                );
+            case 'request_revision':
+                return ArticleWorkflowController.requestRevision.form(params);
+            case 'force_status':
+                return ArticleWorkflowController.forceStatus.form(params);
+            case 'assign_author':
+                return ArticleWorkflowController.assignAuthor.form(params);
+            case 'assign_editorial':
+                return ArticleWorkflowController.assignEditorial.form(params);
+            case 'recall':
+                return ArticleWorkflowController.recall.form(params);
+            case 'mark_ready':
+                return ArticleWorkflowController.markReady.form(params);
+            case 'start_product_manager_correction':
+                return ArticleWorkflowController.startProductManagerCorrection.form(
+                    params,
+                );
+            case 'complete_product_manager_correction':
+                return ArticleWorkflowController.completeProductManagerCorrection.form(
+                    params,
+                );
+            case 'publish':
+                return ArticleWorkflowController.publish.form(params);
+            case 'unpublish':
+                return ArticleWorkflowController.unpublish.form(params);
+        }
+    };
+
+    const closeDialog = (open: boolean) => {
+        if (!open) {
+            setActiveAction(null);
+        }
+    };
+
     return (
-        <div className="flex flex-wrap items-center gap-2">
-            {isAllowed('submit_manuscript') && (
-                <WorkflowActionDialog
-                    action="submit_manuscript"
-                    form={ArticleWorkflowController.submitManuscript.form({
-                        article: articleId,
-                    })}
+        <>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button type="button" size="sm" variant="outline">
+                        {t('articles.workflow.actions_menu')}
+                        <ChevronDown className="size-4" />
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="min-w-56">
+                    {visibleActions.map((action) => (
+                        <DropdownMenuItem
+                            key={action}
+                            variant={
+                                DESTRUCTIVE_ACTIONS.includes(action)
+                                    ? 'destructive'
+                                    : 'default'
+                            }
+                            onSelect={() => setActiveAction(action)}
+                        >
+                            {t(`articles.workflow.actions.${action}`)}
+                        </DropdownMenuItem>
+                    ))}
+                </DropdownMenuContent>
+            </DropdownMenu>
+
+            {activeAction !== null &&
+                activeAction !== 'force_status' &&
+                !ASSIGNMENT_ACTIONS.includes(activeAction) && (
+                    <WorkflowActionDialog
+                        action={activeAction}
+                        form={workflowFormFor(activeAction)}
+                        reasonRequired={REASON_REQUIRED_ACTIONS.includes(
+                            activeAction,
+                        )}
+                        destructive={DESTRUCTIVE_ACTIONS.includes(activeAction)}
+                        open
+                        onOpenChange={closeDialog}
+                    />
+                )}
+
+            {(activeAction === 'assign_author' ||
+                activeAction === 'assign_editorial') && (
+                <AssignmentDialog
+                    action={activeAction}
+                    users={
+                        activeAction === 'assign_author'
+                            ? authors
+                            : editorialStaff
+                    }
+                    form={workflowFormFor(activeAction)}
+                    open
+                    onOpenChange={closeDialog}
                 />
             )}
-            {isAllowed('complete_editorial_work') && (
-                <WorkflowActionDialog
-                    action="complete_editorial_work"
-                    form={ArticleWorkflowController.completeEditorialWork.form({
-                        article: articleId,
-                    })}
-                />
-            )}
-            {isAllowed('request_revision') && (
-                <WorkflowActionDialog
-                    action="request_revision"
-                    reasonRequired
-                    form={ArticleWorkflowController.requestRevision.form({
-                        article: articleId,
-                    })}
-                />
-            )}
-            {isAllowed('force_status') && (
+
+            {activeAction === 'force_status' && (
                 <ForceStatusDialog
                     editorialStaff={editorialStaff}
-                    form={ArticleWorkflowController.forceStatus.form({
-                        article: articleId,
-                    })}
+                    form={workflowFormFor('force_status')}
+                    open
+                    onOpenChange={closeDialog}
                 />
             )}
-            {isAllowed('assign_author') && (
-                <AssignmentDialog
-                    action="assign_author"
-                    users={authors}
-                    form={ArticleWorkflowController.assignAuthor.form({
-                        article: articleId,
-                    })}
-                />
-            )}
-            {isAllowed('assign_editorial') && (
-                <AssignmentDialog
-                    action="assign_editorial"
-                    users={editorialStaff}
-                    form={ArticleWorkflowController.assignEditorial.form({
-                        article: articleId,
-                    })}
-                />
-            )}
-            {isAllowed('recall') && (
-                <WorkflowActionDialog
-                    action="recall"
-                    form={ArticleWorkflowController.recall.form({
-                        article: articleId,
-                    })}
-                />
-            )}
-            {isAllowed('mark_ready') && (
-                <WorkflowActionDialog
-                    action="mark_ready"
-                    form={ArticleWorkflowController.markReady.form({
-                        article: articleId,
-                    })}
-                />
-            )}
-            {isAllowed('start_product_manager_correction') && (
-                <WorkflowActionDialog
-                    action="start_product_manager_correction"
-                    form={ArticleWorkflowController.startProductManagerCorrection.form(
-                        {
-                            article: articleId,
-                        },
-                    )}
-                />
-            )}
-            {isAllowed('complete_product_manager_correction') && (
-                <WorkflowActionDialog
-                    action="complete_product_manager_correction"
-                    form={ArticleWorkflowController.completeProductManagerCorrection.form(
-                        {
-                            article: articleId,
-                        },
-                    )}
-                />
-            )}
-            {isAllowed('publish') && (
-                <WorkflowActionDialog
-                    action="publish"
-                    destructive
-                    form={ArticleWorkflowController.publish.form({
-                        article: articleId,
-                    })}
-                />
-            )}
-        </div>
+        </>
     );
 }

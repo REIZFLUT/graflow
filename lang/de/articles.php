@@ -31,6 +31,9 @@ return [
         'author' => 'Autor',
         'all' => 'Alle',
         'reset' => 'Filter zurücksetzen',
+        'archive' => 'Archiv',
+        'active' => 'Aufgaben',
+        'empty_archive' => 'Keine veröffentlichten Artikel im Archiv.',
     ],
     'pagination' => 'Artikelseiten',
     'pagination_page_of' => 'Seite :current von :last',
@@ -120,6 +123,7 @@ return [
         'assignee' => 'Verantwortliche Person',
         'assignee_placeholder' => 'Person auswählen',
         'status' => 'Status',
+        'actions_menu' => 'Aktionen',
         'reason' => 'Begründung',
         'reason_placeholder' => 'Kontext zu diesem Workflow-Schritt ergänzen…',
         'optional' => '(optional)',
@@ -143,6 +147,7 @@ return [
             'recall' => 'Zurückrufen',
             'mark_ready' => 'Als bereit markieren',
             'publish' => 'Veröffentlichen',
+            'unpublish' => 'Entveröffentlichen',
             'start_product_manager_correction' => 'Korrektur starten',
             'complete_product_manager_correction' => 'Korrektur abschließen',
         ],
@@ -172,8 +177,8 @@ return [
                 'description' => 'Wähle Redaktion oder Lektorat für den nächsten Workflow-Schritt.',
             ],
             'recall' => [
-                'title' => 'Redaktionelle Arbeit zurückrufen?',
-                'description' => 'Setze den Artikel auf den Stand „Manuskript eingereicht“ zurück.',
+                'title' => 'Artikel zurückrufen?',
+                'description' => 'Hole den Artikel unabhängig vom aktuellen Status zurück auf „Manuskript eingereicht“. Eine bestehende Veröffentlichung wird dabei aufgehoben.',
             ],
             'mark_ready' => [
                 'title' => 'Artikel als bereit markieren?',
@@ -182,6 +187,10 @@ return [
             'publish' => [
                 'title' => 'Artikel veröffentlichen?',
                 'description' => 'Nach der Veröffentlichung sind alle Änderungen gesperrt.',
+            ],
+            'unpublish' => [
+                'title' => 'Veröffentlichung aufheben?',
+                'description' => 'Der Artikel wird aus der Veröffentlichung genommen und kann wieder bearbeitet werden. Eine Begründung ist Pflicht.',
             ],
             'start_product_manager_correction' => [
                 'title' => 'Produktmanager-Korrektur starten?',

@@ -137,7 +137,9 @@ export function mapIssuesToPositions(
     doc: ProseMirrorNode,
     issues: ProofreadIssue[],
 ): MappedProofreadIssue[] {
-    const { text, offsetToPos } = extractPlainTextWithMap(doc);
+    const { text, offsetToPos } = extractPlainTextWithMap(doc, {
+        math: 'latex',
+    });
     const usedRanges: PlainTextRange[] = [];
     const docSize = doc.content.size;
 

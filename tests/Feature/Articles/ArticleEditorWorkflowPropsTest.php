@@ -31,7 +31,7 @@ class ArticleEditorWorkflowPropsTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('capabilities.update_content', true)
                 ->where('capabilities.manage_workflow', true)
-                ->where('allowedActions', ['complete_product_manager_correction']));
+                ->where('allowedActions', ['recall', 'complete_product_manager_correction']));
     }
 
     public function test_workflow_manager_receives_role_filtered_assignment_options(): void
@@ -112,7 +112,12 @@ class ArticleEditorWorkflowPropsTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('capabilities.force_status', true)
                 ->where('capabilities.unpublish', true)
-                ->where('allowedActions', ['force_status', 'unpublish'])
+                ->where('allowedActions', [
+                    'force_status',
+                    'unpublish',
+                    'recall',
+                    'start_product_manager_correction',
+                ])
                 ->has('editorialStaff', 1));
     }
 
@@ -149,7 +154,11 @@ class ArticleEditorWorkflowPropsTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('capabilities.unpublish', true)
                 ->where('capabilities.manage_workflow', false)
-                ->where('allowedActions', ['unpublish']));
+                ->where('allowedActions', [
+                    'unpublish',
+                    'recall',
+                    'start_product_manager_correction',
+                ]));
     }
 
     public function test_editor_receives_workflow_events_with_reason(): void

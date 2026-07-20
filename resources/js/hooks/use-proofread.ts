@@ -99,7 +99,9 @@ export function useProofread(): UseProofreadReturn {
 
     const runCheck = useCallback(
         async (editor: Editor): Promise<boolean> => {
-            const { text } = extractPlainTextWithMap(editor.state.doc);
+            const { text } = extractPlainTextWithMap(editor.state.doc, {
+                math: 'latex',
+            });
 
             if (text.trim() === '') {
                 editor.commands.clearProofread();

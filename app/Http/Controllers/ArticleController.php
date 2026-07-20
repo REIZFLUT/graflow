@@ -45,6 +45,7 @@ class ArticleController extends Controller
         $publicationId = isset($filters['publication_id']) ? (int) $filters['publication_id'] : null;
         $issueId = isset($filters['issue_id']) ? (int) $filters['issue_id'] : null;
         $authorId = isset($filters['author_id']) ? (int) $filters['author_id'] : null;
+        $archived = $request->boolean('archived');
         $perPage = isset($filters['per_page']) ? (int) $filters['per_page'] : 15;
 
         $applyAuthorizationScope = function ($query) use ($user): void {
@@ -59,6 +60,11 @@ class ArticleController extends Controller
 
         $articles = Article::query()
             ->tap($applyAuthorizationScope)
+            ->when(
+                $archived,
+                fn ($query) => $query->where('articles.status', ArticleStatus::Published),
+                fn ($query) => $query->where('articles.status', '!=', ArticleStatus::Published),
+            )
             ->when($search !== null, fn ($query) => $query->where('articles.title', 'like', "%{$search}%"))
             ->when($publicationId !== null, fn ($query) => $query->whereHas(
                 'publicationIssue',
@@ -104,6 +110,7 @@ class ArticleController extends Controller
                 'publication_id' => $publicationId,
                 'issue_id' => $issueId,
                 'author_id' => $authorId,
+                'archived' => $archived,
                 'per_page' => $perPage,
             ],
             'filterOptions' => $this->articleFilterOptions($applyAuthorizationScope),
@@ -313,6 +320,14 @@ class ArticleController extends Controller
             $actions[] = 'unpublish';
         }
 
+        if (Gate::allows('recall', $article)) {
+            $actions[] = 'recall';
+        }
+
+        if (Gate::allows('startProductManagerCorrection', $article)) {
+            $actions[] = 'start_product_manager_correction';
+        }
+
         if (! Gate::allows('manageWorkflow', $article)) {
             return $actions;
         }
@@ -322,7 +337,6 @@ class ArticleController extends Controller
             ...match ($article->status) {
                 ArticleStatus::Planned => ['assign_author'],
                 ArticleStatus::ManuscriptSubmitted, ArticleStatus::RevisionRequested => [
-                    'start_product_manager_correction',
                     'return_to_author',
                     'assign_author',
                     'assign_editorial',
@@ -331,9 +345,8 @@ class ArticleController extends Controller
                 ArticleStatus::ProductManagerCorrection => [
                     'complete_product_manager_correction',
                 ],
-                ArticleStatus::EditorialWork => ['recall', 'mark_ready'],
+                ArticleStatus::EditorialWork => ['mark_ready'],
                 ArticleStatus::ReadyForPublication => [
-                    'start_product_manager_correction',
                     'return_to_author',
                     'assign_author',
                     'assign_editorial',

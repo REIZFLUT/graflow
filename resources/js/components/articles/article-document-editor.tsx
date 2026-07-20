@@ -925,7 +925,7 @@ export default function ArticleDocumentEditor({
 
                     {workflowActions}
 
-                    {articleId !== undefined && !readOnly && (
+                    {articleId !== undefined && (
                         <Button
                             variant="ghost"
                             size="sm"

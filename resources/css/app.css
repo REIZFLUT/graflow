@@ -427,12 +427,18 @@
     }
 
     .article-document-body .article-prose .infokasten {
-        background-color: color-mix(in oklab, #3b82f6 12%, white);
+        background-color: color-mix(in oklab, #3b82f6 12%, var(--background));
         border: 1px solid color-mix(in oklab, #2563eb 65%, var(--border));
         border-radius: 0.375rem;
+        color: var(--foreground);
         margin-top: 1em;
         margin-bottom: 1em;
         padding: 0.75rem 1rem;
+    }
+
+    .dark .article-document-body .article-prose .infokasten {
+        background-color: color-mix(in oklab, #3b82f6 28%, var(--background));
+        border-color: color-mix(in oklab, #60a5fa 45%, var(--border));
     }
 
     .article-document-body .article-prose .infokasten > :first-child {

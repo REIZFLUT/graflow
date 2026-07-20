@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\NotificationType;
 use App\Enums\UserRole;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -24,6 +25,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property string $email
  * @property Carbon|null $email_verified_at
  * @property UserRole $role
+ * @property array<string, bool>|null $notification_preferences
  * @property string $password
  * @property string|null $two_factor_secret
  * @property string|null $two_factor_recovery_codes
@@ -58,8 +60,23 @@ class User extends Authenticatable implements PasskeyUser
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'role' => UserRole::class,
+            'notification_preferences' => 'array',
             'two_factor_confirmed_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Determine whether the user wants to receive the given notification type.
+     */
+    public function wantsNotification(NotificationType $type): bool
+    {
+        $preferences = $this->notification_preferences ?? [];
+
+        if (array_key_exists($type->value, $preferences)) {
+            return (bool) $preferences[$type->value];
+        }
+
+        return $type->isRelevantForRole($this->role);
     }
 
     public function canManageEditorSettingsSets(): bool

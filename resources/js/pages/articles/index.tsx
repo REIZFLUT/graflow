@@ -8,7 +8,7 @@ import {
     
 } from '@tanstack/react-table';
 import type {OnChangeFn, SortingState, VisibilityState} from '@tanstack/react-table';
-import { X } from 'lucide-react';
+import { Archive, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { DataTablePagination } from '@/components/data-table/data-table-pagination';
 import { DataTableViewOptions } from '@/components/data-table/data-table-view-options';
@@ -99,6 +99,10 @@ function buildParamsFromFilters(filters: Partial<ArticleFilters>): QueryParams {
         params.author_id = filters.author_id;
     }
 
+    if (filters.archived) {
+        params.archived = 1;
+    }
+
     if (filters.per_page && filters.per_page !== DEFAULT_PER_PAGE) {
         params.per_page = filters.per_page;
     }
@@ -147,6 +151,7 @@ export default function ArticlesIndex({
             publication_id: filters.publication_id,
             issue_id: filters.issue_id,
             author_id: filters.author_id,
+            archived: filters.archived,
             per_page: filters.per_page,
             page: articles.current_page,
             ...partial,
@@ -219,6 +224,7 @@ export default function ArticlesIndex({
             Boolean(storedFilters.publication_id) ||
             Boolean(storedFilters.issue_id) ||
             Boolean(storedFilters.author_id) ||
+            Boolean(storedFilters.archived) ||
             (Boolean(storedFilters.per_page) &&
                 storedFilters.per_page !== DEFAULT_PER_PAGE);
 
@@ -286,11 +292,12 @@ export default function ArticlesIndex({
     function resetFilters(): void {
         setSearchValue('');
         setSorting([]);
-        navigate({});
+        navigate(filters.archived ? { archived: 1 } : {});
     }
 
     const columnCount = table.getVisibleFlatColumns().length;
-    const showEmptyState = articles.data.length === 0 && !hasActiveFilters;
+    const showEmptyState =
+        articles.data.length === 0 && !hasActiveFilters && !filters.archived;
 
     return (
         <>
@@ -454,6 +461,24 @@ export default function ArticlesIndex({
                                 </Button>
                             )}
 
+                            <Button
+                                variant={
+                                    filters.archived ? 'default' : 'outline'
+                                }
+                                size="sm"
+                                onClick={() =>
+                                    applyChange({
+                                        archived: !filters.archived,
+                                        page: 1,
+                                    })
+                                }
+                            >
+                                <Archive className="size-4" />
+                                {filters.archived
+                                    ? t('articles.filters.active')
+                                    : t('articles.filters.archive')}
+                            </Button>
+
                             <DataTableViewOptions
                                 table={table}
                                 columnVisibility={columnVisibility}
@@ -519,7 +544,14 @@ export default function ArticlesIndex({
                                                 colSpan={columnCount}
                                                 className="h-24 text-center text-muted-foreground"
                                             >
-                                                {t('articles.table.no_results')}
+                                                {filters.archived &&
+                                                !hasActiveFilters
+                                                    ? t(
+                                                          'articles.filters.empty_archive',
+                                                      )
+                                                    : t(
+                                                          'articles.table.no_results',
+                                                      )}
                                             </TableCell>
                                         </TableRow>
                                     )}

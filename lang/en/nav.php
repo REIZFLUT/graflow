@@ -11,6 +11,7 @@ return [
     'log_out' => 'Log out',
     'profile' => 'Profile',
     'security' => 'Security',
+    'notifications' => 'Notifications',
     'appearance' => 'Appearance',
     'repository' => 'Repository',
     'documentation' => 'Documentation',

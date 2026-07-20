@@ -25,6 +25,7 @@ class IndexArticleRequest extends FormRequest
             'publication_id' => ['nullable', 'integer', 'exists:publications,id'],
             'issue_id' => ['nullable', 'integer', 'exists:publication_issues,id'],
             'author_id' => ['nullable', 'integer', 'exists:users,id'],
+            'archived' => ['nullable', 'boolean'],
             'per_page' => ['nullable', 'integer', 'in:10,15,25,50'],
         ];
     }

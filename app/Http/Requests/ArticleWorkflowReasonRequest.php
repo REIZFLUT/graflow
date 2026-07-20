@@ -19,6 +19,8 @@ class ArticleWorkflowReasonRequest extends FormRequest
             'articles.workflow.complete-editorial-work' => 'completeEditorialWork',
             'articles.workflow.request-revision' => 'requestRevision',
             'articles.workflow.unpublish' => 'unpublish',
+            'articles.workflow.recall' => 'recall',
+            'articles.workflow.start-product-manager-correction' => 'startProductManagerCorrection',
             default => 'manageWorkflow',
         };
 

@@ -39,6 +39,23 @@ return [
         'description' => 'Manage your passkeys for passwordless sign-in',
     ],
 
+    'notifications' => [
+        'title' => 'Notifications',
+        'sr_title' => 'Notification settings',
+        'heading' => 'Email notifications',
+        'description' => 'Choose what you want to be notified about by email',
+        'empty' => 'There are currently no notifications available for your role.',
+        'save' => 'Save',
+        'types' => [
+            'assigned_responsible' => 'Notify me when I become responsible for an article (again).',
+            'article_published' => 'Notify me when my article has been published.',
+            'manuscript_submitted' => 'Notify me when a manuscript has been submitted.',
+            'revision_requested' => 'Notify me when a revision has been requested.',
+            'editorial_completed' => 'Notify me when editorial work has been completed.',
+            'ready_for_publication' => 'Notify me when an article is ready for publication.',
+        ],
+    ],
+
     'appearance' => [
         'title' => 'Appearance settings',
         'sr_title' => 'Appearance settings',

@@ -88,6 +88,56 @@ class ArticleIndexFilterTest extends TestCase
                 ->where('filters.author_id', $authorA->id));
     }
 
+    public function test_index_hides_published_articles_by_default(): void
+    {
+        $admin = $this->admin();
+
+        $active = Article::factory()->create();
+        Article::factory()->published()->create();
+
+        $this->actingAs($admin)
+            ->get(route('articles.index'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('articles.data', fn ($data) => collect($data)->pluck('id')->all() === [$active->id])
+                ->where('filters.archived', false));
+    }
+
+    public function test_archived_filter_returns_only_published_articles(): void
+    {
+        $admin = $this->admin();
+
+        Article::factory()->create();
+        $published = Article::factory()->published()->create();
+
+        $this->actingAs($admin)
+            ->get(route('articles.index', ['archived' => 1]))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('articles.data', fn ($data) => collect($data)->pluck('id')->all() === [$published->id])
+                ->where('filters.archived', true));
+    }
+
+    public function test_archived_filter_combines_with_author_filter(): void
+    {
+        $admin = $this->admin();
+
+        $authorA = User::factory()->author()->create();
+        $authorB = User::factory()->author()->create();
+
+        $match = Article::factory()->published()->create(['author_id' => $authorA->id]);
+        Article::factory()->published()->create(['author_id' => $authorB->id]);
+        Article::factory()->create(['author_id' => $authorA->id]);
+
+        $this->actingAs($admin)
+            ->get(route('articles.index', ['archived' => 1, 'author_id' => $authorA->id]))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('articles.data', fn ($data) => collect($data)->pluck('id')->all() === [$match->id])
+                ->where('filters.archived', true)
+                ->where('filters.author_id', $authorA->id));
+    }
+
     public function test_title_sort_orders_articles_ascending_and_descending(): void
     {
         $admin = $this->admin();

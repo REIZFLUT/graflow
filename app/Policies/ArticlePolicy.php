@@ -76,13 +76,7 @@ class ArticlePolicy
     public function manageWorkflow(User $user, Article $article): bool
     {
         return $article->status !== ArticleStatus::Published
-            && (
-                $user->role === UserRole::Admin
-                || (
-                    $user->role === UserRole::ProductManager
-                    && $user->id === $article->product_manager_id
-                )
-            );
+            && $this->isWorkflowManager($user, $article);
     }
 
     public function forceStatus(User $user, Article $article): bool
@@ -93,17 +87,32 @@ class ArticlePolicy
     public function unpublish(User $user, Article $article): bool
     {
         return $article->status === ArticleStatus::Published
-            && (
-                $user->role === UserRole::Admin
-                || (
-                    $user->role === UserRole::ProductManager
-                    && $user->id === $article->product_manager_id
-                )
-            );
+            && $this->isWorkflowManager($user, $article);
+    }
+
+    public function recall(User $user, Article $article): bool
+    {
+        return $article->status !== ArticleStatus::ManuscriptSubmitted
+            && $this->isWorkflowManager($user, $article);
+    }
+
+    public function startProductManagerCorrection(User $user, Article $article): bool
+    {
+        return $article->status !== ArticleStatus::ProductManagerCorrection
+            && $this->isWorkflowManager($user, $article);
     }
 
     public function delete(User $user, Article $article): bool
     {
         return $this->manageWorkflow($user, $article);
+    }
+
+    private function isWorkflowManager(User $user, Article $article): bool
+    {
+        return $user->role === UserRole::Admin
+            || (
+                $user->role === UserRole::ProductManager
+                && $user->id === $article->product_manager_id
+            );
     }
 }

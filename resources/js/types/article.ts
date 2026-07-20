@@ -31,6 +31,7 @@ export type ArticleWorkflowAction =
     | 'recall'
     | 'mark_ready'
     | 'publish'
+    | 'unpublish'
     | 'start_product_manager_correction'
     | 'complete_product_manager_correction';
 
@@ -41,6 +42,7 @@ export type ArticleCapabilities = {
     force_status: boolean;
     request_revision: boolean;
     manage_workflow: boolean;
+    unpublish: boolean;
     delete: boolean;
     comment: boolean;
 };
@@ -193,6 +195,7 @@ export type ArticleFilters = {
     publication_id: number | null;
     issue_id: number | null;
     author_id: number | null;
+    archived: boolean;
     per_page: number;
 };
 

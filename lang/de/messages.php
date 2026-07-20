@@ -49,6 +49,7 @@ return [
     'settings' => [
         'profile_updated' => 'Profil aktualisiert.',
         'password_updated' => 'Passwort aktualisiert.',
+        'notifications_updated' => 'Benachrichtigungseinstellungen aktualisiert.',
     ],
     'two_factor' => [
         'fetch_qr_failed' => 'QR-Code konnte nicht geladen werden.',

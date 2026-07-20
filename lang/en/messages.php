@@ -49,6 +49,7 @@ return [
     'settings' => [
         'profile_updated' => 'Profile updated.',
         'password_updated' => 'Password updated.',
+        'notifications_updated' => 'Notification settings updated.',
     ],
     'two_factor' => [
         'fetch_qr_failed' => 'Failed to fetch QR code.',

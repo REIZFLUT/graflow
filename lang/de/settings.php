@@ -39,6 +39,23 @@ return [
         'description' => 'Passkeys für passwortlose Anmeldung verwalten',
     ],
 
+    'notifications' => [
+        'title' => 'Benachrichtigungen',
+        'sr_title' => 'Benachrichtigungseinstellungen',
+        'heading' => 'E-Mail-Benachrichtigungen',
+        'description' => 'Legen Sie fest, worüber Sie per E-Mail benachrichtigt werden möchten',
+        'empty' => 'Für Ihre Rolle sind derzeit keine Benachrichtigungen verfügbar.',
+        'save' => 'Speichern',
+        'types' => [
+            'assigned_responsible' => 'Ich möchte benachrichtigt werden, wenn ich (wieder) für einen Artikel zuständig bin.',
+            'article_published' => 'Ich möchte benachrichtigt werden, wenn mein Artikel veröffentlicht wurde.',
+            'manuscript_submitted' => 'Ich möchte benachrichtigt werden, wenn ein Manuskript eingereicht wurde.',
+            'revision_requested' => 'Ich möchte benachrichtigt werden, wenn eine Überarbeitung angefordert wurde.',
+            'editorial_completed' => 'Ich möchte benachrichtigt werden, wenn die Lektorat-/Redaktionsarbeit abgeschlossen wurde.',
+            'ready_for_publication' => 'Ich möchte benachrichtigt werden, wenn ein Artikel druckreif ist.',
+        ],
+    ],
+
     'appearance' => [
         'title' => 'Erscheinungsbild',
         'sr_title' => 'Erscheinungsbild',

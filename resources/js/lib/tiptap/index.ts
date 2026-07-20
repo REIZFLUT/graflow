@@ -88,7 +88,9 @@ export {
 export {
     extractPlainTextWithMap,
     mapMatchesToPositions,
+    type ExtractPlainTextOptions,
     type LanguageToolMatch,
+    type MathExtractionMode,
 } from '@/lib/tiptap/spellcheck-utils';
 export {
     Proofread,

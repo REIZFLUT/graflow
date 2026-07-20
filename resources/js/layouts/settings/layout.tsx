@@ -7,6 +7,7 @@ import { useCurrentUrl } from '@/hooks/use-current-url';
 import { useTranslation } from '@/hooks/use-translation';
 import { cn, toUrl } from '@/lib/utils';
 import { edit as editAppearance } from '@/routes/appearance';
+import { edit as editNotifications } from '@/routes/notifications';
 import { edit } from '@/routes/profile';
 import { edit as editSecurity } from '@/routes/security';
 import type { NavItem } from '@/types';
@@ -24,6 +25,11 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
         {
             title: t('nav.security'),
             href: editSecurity(),
+            icon: null,
+        },
+        {
+            title: t('nav.notifications'),
+            href: editNotifications(),
             icon: null,
         },
         {
